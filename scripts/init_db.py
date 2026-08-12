@@ -12,6 +12,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.storage.database import Base, engine
 import src.storage.raw_models  # noqa: F401 — registers models with Base
+import src.storage.models      # noqa: F401 — registers unified models with Base
 
 
 def main() -> None:
