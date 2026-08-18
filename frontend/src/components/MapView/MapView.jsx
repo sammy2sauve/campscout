@@ -60,7 +60,7 @@ export function MapView({ campgrounds, onBboxChange }) {
         <SearchCenterWatcher />
 
         <MarkerClusterGroup chunkedLoading>
-          {campgrounds.map((cg) => (
+          {campgrounds.filter((cg) => cg.location?.lat != null && cg.location?.lon != null).map((cg) => (
             <Marker
               key={cg.id}
               position={[cg.location.lat, cg.location.lon]}
