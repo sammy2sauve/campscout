@@ -1,0 +1,280 @@
+.panel {
+  width: var(--detail-width);
+  min-width: var(--detail-width);
+  background: var(--color-panel);
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.topBar {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px 10px 4px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 16px;
+  color: var(--color-text-muted);
+  padding: 4px 8px;
+  border-radius: 4px;
+  line-height: 1;
+}
+
+.closeBtn:hover { background: var(--color-bg); }
+
+.center {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.heading {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.name {
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.state {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 500;
+}
+
+.meta {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  margin-top: -10px;
+}
+
+.reserveLink {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+  margin-top: -8px;
+}
+
+.reserveLink:hover { text-decoration: underline; }
+
+.sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-text-muted);
+  margin-bottom: 7px;
+}
+
+.amenityRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.amenityChip {
+  padding: 3px 10px;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--color-text);
+  white-space: pre-wrap;
+}
+
+.empty {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
+/* Weather */
+.staleWarning {
+  padding: 6px 10px;
+  background: #fff8e1;
+  border: 1px solid var(--color-stale);
+  border-radius: 4px;
+  font-size: 12px;
+  color: #7d5a00;
+  margin-bottom: 8px;
+}
+
+.weatherGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.weatherDay {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.weatherDate {
+  padding: 5px 10px;
+  background: var(--color-bg);
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.weatherPeriods {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.weatherPeriod {
+  padding: 7px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 12px;
+}
+
+.weatherPeriod.night {
+  border-left: 1px solid var(--color-border);
+  background: #f9f9f8;
+}
+
+.periodLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-text-muted);
+}
+
+.temp {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.precip {
+  color: var(--color-info);
+  font-size: 11px;
+}
+
+.forecast {
+  color: var(--color-text-muted);
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+/* Alerts */
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.alertCard {
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 10px 12px;
+}
+
+.alertHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+}
+
+.alertBadge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.alertDate {
+  font-size: 11px;
+  color: var(--color-text-muted);
+}
+
+.alertTitle {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.alertDesc {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  max-height: 100px;
+  overflow-y: auto;
+}
+
+/* Availability */
+.availSummary {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.availCount {
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.availGood { color: var(--color-primary); }
+.availNone { color: var(--color-danger); }
+
+.availLabel {
+  font-size: 13px;
+  color: var(--color-text-muted);
+  font-weight: 400;
+}
+
+.availBreakdown {
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.availRow {
+  display: flex;
+  justify-content: space-between;
+  color: var(--color-text-muted);
+}
