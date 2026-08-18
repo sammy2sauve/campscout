@@ -1,0 +1,30 @@
+.badge {
+  position: absolute;
+  bottom: 28px;
+  right: 10px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: #2c1f0e;
+  color: #e8dfc8;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+  pointer-events: none;
+  user-select: none;
+}
+
+.dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fresh .dot  { background: #2e6b2e; }
+.aging .dot  { background: #c78f2b; }
+.stale .dot  { background: #c0392b; }

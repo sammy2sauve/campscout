@@ -52,6 +52,14 @@ campscout/
   weather as stale/unavailable) rather than fail the whole run when one
   station doesn't respond.
 
+## UI conventions
+
+- **Always use the TypeUI MCP** before making any frontend UI/UX decisions.
+  - Call `typeui_get_section_prompt` or `typeui_setup_workflow` before generating or editing UI components.
+  - Read the installed fundamentals guardrail files in `.claude/skills/typeui-fundamentals/` before applying design changes.
+  - TypeUI principles override personal defaults for spacing, hierarchy, typography, and component patterns.
+- Terrain/landscape section is labelled **"Landscape"** (not "Terrain" or "Terrain & Features") everywhere in the UI.
+
 ## Working conventions
 
 - Each ingestion module should be independently runnable and independently

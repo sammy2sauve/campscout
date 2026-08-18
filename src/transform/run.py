@@ -75,8 +75,13 @@ def transform_campgrounds(db: Session) -> None:
             db.add(cg)
 
         cg.name = f.get("FacilityName", "")
-        cg.description = f.get("FacilityDescription")
+        cg.description = strip_html(f.get("FacilityDescription") or "")
         cg.phone = f.get("FacilityPhone")
+
+        # Extract primary photo URLs from MEDIA array (already fetched via full=true)
+        media = f.get("MEDIA", [])
+        photos = [m["URL"] for m in media if m.get("EntityMediaType") == "Image" and m.get("URL")]
+        cg.photo_urls = photos[:5] if photos else None
         cg.reservation_url = f.get("FacilityReservationURL")
         cg.stay_limit = f.get("StayLimit") or None
 
@@ -475,9 +480,10 @@ def transform_tags(db: Session) -> None:
             text_parts.append(alert.description or "")
 
         combined = " ".join(text_parts)
-        wildlife, terrain = extract_tags(combined)
+        wildlife, landscape, activities = extract_tags(combined)
         cg.wildlife_tags = wildlife or None
-        cg.terrain_tags = terrain or None
+        cg.terrain_tags = landscape or None
+        cg.activity_tags = activities or None
 
     db.commit()
     log.info("Tags extracted")

@@ -20,6 +20,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import JSONB
 
 from .database import Base
 
@@ -59,7 +60,11 @@ class Campground(Base):
 
     # Extracted tags from description + alert text
     wildlife_tags = Column(ARRAY(String))
-    terrain_tags = Column(ARRAY(String))
+    terrain_tags = Column(ARRAY(String))   # landscape geographic features
+    activity_tags = Column(ARRAY(String))  # activities: fishing, hiking, etc.
+
+    # Photo URLs extracted from Recreation.gov MEDIA array
+    photo_urls = Column(JSONB)
 
     created_at = Column(DateTime(timezone=True), default=_now)
     updated_at = Column(DateTime(timezone=True), default=_now, onupdate=_now)

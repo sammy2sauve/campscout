@@ -10,7 +10,7 @@ import styles from './App.module.css'
 function Dashboard() {
   const [bbox, setBbox] = useState(null)
   const { filters } = useApp()
-  const { campgrounds, loading } = useCampgrounds(bbox, filters)
+  const { campgrounds, dataAsOf, loading } = useCampgrounds(bbox, filters)
 
   return (
     <div className={styles.layout}>
@@ -22,7 +22,7 @@ function Dashboard() {
 
       <div className={styles.body}>
         <FilterPanel />
-        <MapView campgrounds={campgrounds} onBboxChange={setBbox} />
+        <MapView campgrounds={campgrounds} dataAsOf={dataAsOf} onBboxChange={setBbox} />
         <DetailPanel />
       </div>
     </div>

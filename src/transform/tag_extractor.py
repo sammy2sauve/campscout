@@ -1,5 +1,5 @@
 """
-Keyword-based wildlife and terrain tag extraction.
+Keyword-based wildlife, landscape, and activity tag extraction.
 
 Keyword lists live in keywords.json — add/edit tags there, not here.
 """
@@ -30,21 +30,26 @@ def strip_html(text: str) -> str:
     return _WHITESPACE.sub(" ", text).strip()
 
 
-def extract_tags(text: str) -> tuple[list[str], list[str]]:
+def extract_tags(text: str) -> tuple[list[str], list[str], list[str]]:
     """
-    Return (wildlife_tags, terrain_tags) matched in text.
+    Return (wildlife_tags, landscape_tags, activity_tags) matched in text.
     Tags are the canonical keyword strings from keywords.json.
     """
     clean = strip_html(text)
     wildlife: list[str] = []
-    terrain: list[str] = []
+    landscape: list[str] = []
+    activities: list[str] = []
 
-    for pattern, keyword in _PATTERNS["wildlife"]:
+    for pattern, keyword in _PATTERNS.get("wildlife", []):
         if pattern.search(clean):
             wildlife.append(keyword)
 
-    for pattern, keyword in _PATTERNS["terrain"]:
+    for pattern, keyword in _PATTERNS.get("landscape", []):
         if pattern.search(clean):
-            terrain.append(keyword)
+            landscape.append(keyword)
 
-    return wildlife, terrain
+    for pattern, keyword in _PATTERNS.get("activities", []):
+        if pattern.search(clean):
+            activities.append(keyword)
+
+    return wildlife, landscape, activities

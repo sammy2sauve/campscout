@@ -18,7 +18,7 @@
     "armadillo",
     "bat"
   ],
-  "terrain": [
+  "landscape": [
     "waterfall", "falls",
     "lake", "pond", "reservoir",
     "river", "creek", "stream", "brook",
@@ -33,12 +33,15 @@
     "swamp", "wetland", "marsh",
     "island",
     "waterfront", "lakefront", "riverfront",
-    "swimming", "swim",
+    "shaded", "shade"
+  ],
+  "activities": [
     "fishing",
-    "shaded", "shade",
-    "primitive",
+    "hunting", "hunt",
+    "hiking", "trail",
     "walk-in", "walk in",
-    "boat ramp", "marina", "boating",
-    "trail", "hiking"
+    "swimming", "swim",
+    "boating", "boat ramp", "marina",
+    "primitive"
   ]
 }

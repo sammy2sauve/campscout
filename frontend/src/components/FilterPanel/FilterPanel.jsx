@@ -1,8 +1,10 @@
 import DatePicker from 'react-datepicker'
 import 'react-datepicker/dist/react-datepicker.css'
 import { useApp } from '../../context/AppContext.jsx'
-import { TagPill } from '../shared/TagPill.jsx'
-import { WILDLIFE_TAGS, TERRAIN_TAGS } from '../../constants/tags.js'
+import { WILDLIFE_TAGS, LANDSCAPE_TAGS, ACTIVITY_TAGS } from '../../constants/tags.js'
+import { WILDLIFE_LEGEND, getWildlifeIcon, primaryWildlifeGroup } from '../../emblems/wildlifeEmblems.js'
+import { TERRAIN_LEGEND } from '../../emblems/terrainColors.js'
+import { ACTIVITY_LEGEND, ACTIVITY_TYPES } from '../../emblems/activityEmblems.js'
 import styles from './FilterPanel.module.css'
 
 const AMENITY_FILTERS = [
@@ -65,31 +67,103 @@ export function FilterPanel() {
         </div>
       </section>
 
+      {/* ── Wildlife ── */}
       <section className={styles.section}>
         <h3 className={styles.sectionTitle}>Wildlife</h3>
-        <div className={styles.pills}>
-          {WILDLIFE_TAGS.map((tag) => (
-            <TagPill
-              key={tag}
-              label={tag}
-              active={filters.wildlife_tags.includes(tag)}
-              onClick={() => toggleTag('wildlife_tags', tag)}
-            />
-          ))}
+        <div className={styles.emblemGrid}>
+          {WILDLIFE_LEGEND.map(({ group, label, svg }) => {
+            const tagsInGroup = WILDLIFE_TAGS.filter(
+              t => (primaryWildlifeGroup([t]) ?? 'other') === group
+            )
+            const anyActive = tagsInGroup.some(t => filters.wildlife_tags.includes(t))
+            return (
+              <button
+                key={group}
+                className={`${styles.emblemBtn} ${anyActive ? styles.emblemActive : ''}`}
+                onClick={() => tagsInGroup.forEach(t => {
+                  if (anyActive ? filters.wildlife_tags.includes(t) : !filters.wildlife_tags.includes(t)) {
+                    toggleTag('wildlife_tags', t)
+                  }
+                })}
+                type="button"
+                aria-pressed={anyActive}
+                title={label}
+              >
+                <span
+                  className={styles.emblemIcon}
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                  aria-hidden="true"
+                />
+                <span className={styles.emblemLabel}>{label}</span>
+              </button>
+            )
+          })}
         </div>
       </section>
 
+      {/* ── Landscape ── */}
       <section className={styles.section}>
-        <h3 className={styles.sectionTitle}>Terrain</h3>
-        <div className={styles.pills}>
-          {TERRAIN_TAGS.map((tag) => (
-            <TagPill
-              key={tag}
-              label={tag}
-              active={filters.terrain_tags.includes(tag)}
-              onClick={() => toggleTag('terrain_tags', tag)}
-            />
-          ))}
+        <h3 className={styles.sectionTitle}>Landscape</h3>
+        <div className={styles.emblemGrid3}>
+          {TERRAIN_LEGEND.map(({ id, label, color, svg, keywords }) => {
+            const tagsInGroup = LANDSCAPE_TAGS.filter(t => keywords.includes(t.toLowerCase()))
+            const anyActive = tagsInGroup.some(t => filters.terrain_tags.includes(t))
+            return (
+              <button
+                key={id}
+                className={`${styles.emblemBtn} ${anyActive ? styles.emblemActive : ''}`}
+                onClick={() => tagsInGroup.forEach(t => {
+                  if (anyActive ? filters.terrain_tags.includes(t) : !filters.terrain_tags.includes(t)) {
+                    toggleTag('terrain_tags', t)
+                  }
+                })}
+                type="button"
+                aria-pressed={anyActive}
+                title={label}
+                style={{ '--emblem-color': color }}
+              >
+                <span
+                  className={styles.emblemIcon}
+                  style={{ color: anyActive ? color : undefined }}
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                  aria-hidden="true"
+                />
+                <span className={styles.emblemLabel}>{label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* ── Activities ── */}
+      <section className={styles.section}>
+        <h3 className={styles.sectionTitle}>Activities</h3>
+        <div className={styles.emblemGrid3}>
+          {ACTIVITY_LEGEND.map(({ id, label, svg, keywords }) => {
+            const tagsInGroup = ACTIVITY_TAGS.filter(t => keywords.includes(t.toLowerCase()))
+            const anyActive = tagsInGroup.some(t => filters.activity_tags.includes(t))
+            return (
+              <button
+                key={id}
+                className={`${styles.emblemBtn} ${anyActive ? styles.emblemActive : ''}`}
+                onClick={() => tagsInGroup.forEach(t => {
+                  if (anyActive ? filters.activity_tags.includes(t) : !filters.activity_tags.includes(t)) {
+                    toggleTag('activity_tags', t)
+                  }
+                })}
+                type="button"
+                aria-pressed={anyActive}
+                title={label}
+              >
+                <span
+                  className={styles.emblemIcon}
+                  dangerouslySetInnerHTML={{ __html: svg }}
+                  aria-hidden="true"
+                />
+                <span className={styles.emblemLabel}>{label}</span>
+              </button>
+            )
+          })}
         </div>
       </section>
     </aside>

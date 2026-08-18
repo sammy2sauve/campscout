@@ -5,9 +5,11 @@ GET /campgrounds       — filtered list with pagination
 GET /campgrounds/{id}  — single campground detail
 """
 import logging
+from datetime import datetime, timezone
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from cachetools import TTLCache
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from sqlalchemy import cast, func
 from sqlalchemy.dialects.postgresql import ARRAY as PgARRAY
 from sqlalchemy.orm import Session
@@ -21,9 +23,14 @@ log = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# In-process TTL caches — no Redis needed for v1 single-instance deployment
+_list_cache: TTLCache = TTLCache(maxsize=512, ttl=300)   # 5 min
+_detail_cache: TTLCache = TTLCache(maxsize=256, ttl=60)  # 60 s
+
 
 @router.get("", response_model=CampgroundList)
 def list_campgrounds(
+    response: Response,
     db: Annotated[Session, Depends(get_db)],
     bbox: Annotated[str | None, Query(description="min_lon,min_lat,max_lon,max_lat")] = None,
     state: Annotated[str | None, Query(max_length=2)] = None,
@@ -34,9 +41,20 @@ def list_campgrounds(
     pets_allowed: bool | None = None,
     wildlife_tags: Annotated[str | None, Query(description="Comma-separated tags; campground must contain ALL")] = None,
     terrain_tags: Annotated[str | None, Query(description="Comma-separated tags; campground must contain ALL")] = None,
+    activity_tags: Annotated[str | None, Query(description="Comma-separated activity tags; campground must contain ALL")] = None,
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CampgroundList:
+    cache_key = (bbox, state, has_electricity, has_showers, has_toilets,
+                 has_drinking_water, pets_allowed, wildlife_tags, terrain_tags,
+                 activity_tags, limit, offset)
+
+    cached = _list_cache.get(cache_key)
+    if cached is not None:
+        response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=60"
+        response.headers["X-Cache"] = "HIT"
+        return cached
+
     query = db.query(Campground)
 
     # Bounding box — matches Leaflet's map.getBounds() format
@@ -56,7 +74,6 @@ def list_campgrounds(
     if state:
         query = query.filter(Campground.state_code == state.upper())
 
-    # Amenity boolean filters — only applied when explicitly provided
     bool_filters = {
         "has_electricity": has_electricity,
         "has_showers": has_showers,
@@ -68,7 +85,6 @@ def list_campgrounds(
         if val is not None:
             query = query.filter(getattr(Campground, col_name) == val)
 
-    # Tag filters — campground must contain ALL requested tags (@> operator)
     if wildlife_tags:
         tags = [t.strip() for t in wildlife_tags.split(",") if t.strip()]
         if tags:
@@ -83,23 +99,52 @@ def list_campgrounds(
                 Campground.terrain_tags.op("@>")(cast(tags, PgARRAY(String)))
             )
 
+    if activity_tags:
+        tags = [t.strip() for t in activity_tags.split(",") if t.strip()]
+        if tags:
+            query = query.filter(
+                Campground.activity_tags.op("@>")(cast(tags, PgARRAY(String)))
+            )
+
     total = query.count()
     items = query.offset(offset).limit(limit).all()
 
-    return CampgroundList(
+    # data_as_of: max updated_at in result set, falls back to now if no rows
+    data_as_of: datetime | None = None
+    if items:
+        max_updated = max((cg.updated_at for cg in items if cg.updated_at), default=None)
+        data_as_of = max_updated
+
+    result = CampgroundList(
         items=[CampgroundSummary.model_validate(cg) for cg in items],
         total=total,
         limit=limit,
         offset=offset,
+        data_as_of=data_as_of,
     )
+
+    _list_cache[cache_key] = result
+    response.headers["Cache-Control"] = "public, max-age=300, stale-while-revalidate=60"
+    response.headers["X-Cache"] = "MISS"
+    return result
 
 
 @router.get("/{campground_id}", response_model=CampgroundDetail)
 def get_campground(
     campground_id: int,
+    response: Response,
     db: Annotated[Session, Depends(get_db)],
 ) -> CampgroundDetail:
+    cached = _detail_cache.get(campground_id)
+    if cached is not None:
+        response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
+        return cached
+
     cg = db.query(Campground).filter(Campground.id == campground_id).first()
     if cg is None:
         raise HTTPException(status_code=404, detail="Campground not found")
-    return CampgroundDetail.model_validate(cg)
+
+    result = CampgroundDetail.model_validate(cg)
+    _detail_cache[campground_id] = result
+    response.headers["Cache-Control"] = "public, max-age=60, stale-while-revalidate=30"
+    return result

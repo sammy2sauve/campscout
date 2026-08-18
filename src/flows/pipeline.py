@@ -13,6 +13,7 @@ Run / serve standalone:
 """
 import argparse
 import logging
+import os
 
 from dotenv import load_dotenv
 from prefect import flow, get_run_logger
@@ -63,6 +64,20 @@ def pipeline() -> None:
 
     # --- Transform phase --- always runs, even if some ingest flows failed
     transform_flow()
+
+    # --- Refresh materialized view --- zero-downtime concurrent refresh
+    try:
+        import sqlalchemy
+        from ..storage.database import SessionLocal
+        with SessionLocal() as db:
+            db.execute(sqlalchemy.text(
+                "REFRESH MATERIALIZED VIEW CONCURRENTLY campground_summary_mv"
+            ))
+            db.commit()
+        logger.info("Materialized view refreshed")
+    except Exception as exc:
+        logger.warning("MV refresh failed (non-fatal): %s", exc)
+
     logger.info("Pipeline complete")
 
 

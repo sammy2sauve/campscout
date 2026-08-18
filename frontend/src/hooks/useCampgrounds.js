@@ -3,6 +3,7 @@ import { fetchCampgrounds } from '../api/client.js'
 
 export function useCampgrounds(bbox, filters) {
   const [campgrounds, setCampgrounds] = useState([])
+  const [dataAsOf, setDataAsOf] = useState(null)
   const [loading, setLoading] = useState(false)
   const timerRef = useRef(null)
 
@@ -14,6 +15,7 @@ export function useCampgrounds(bbox, filters) {
       try {
         const result = await fetchCampgrounds({ bbox, ...filters })
         setCampgrounds(result.items ?? [])
+        setDataAsOf(result.data_as_of ?? null)
       } catch (err) {
         console.error('fetchCampgrounds failed:', err)
       } finally {
@@ -23,5 +25,5 @@ export function useCampgrounds(bbox, filters) {
     return () => clearTimeout(timerRef.current)
   }, [bbox, filters])
 
-  return { campgrounds, loading }
+  return { campgrounds, dataAsOf, loading }
 }

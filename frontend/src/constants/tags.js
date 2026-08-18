@@ -1,5 +1,5 @@
-// Canonical tag vocabulary — copied from src/transform/keywords.json
-// These must match exactly what the backend stores in wildlife_tags / terrain_tags columns.
+// Canonical tag vocabulary — must match what the backend stores in each column.
+// Landscape = geographic features. Activities = things you do there.
 
 export const WILDLIFE_TAGS = [
   'bear', 'deer', 'snake', 'alligator', 'turkey', 'fox', 'coyote',
@@ -8,9 +8,16 @@ export const WILDLIFE_TAGS = [
   'armadillo', 'bat',
 ]
 
-export const TERRAIN_TAGS = [
+export const LANDSCAPE_TAGS = [
   'waterfall', 'lake', 'pond', 'river', 'creek', 'mountain', 'ridge',
   'valley', 'forest', 'meadow', 'beach', 'canyon', 'cave', 'hot spring',
-  'swamp', 'island', 'waterfront', 'swimming', 'fishing', 'shaded',
-  'primitive', 'walk-in', 'boat ramp', 'trail',
+  'swamp', 'island', 'waterfront', 'shaded',
+]
+
+// kept for backend compat (terrain_tags column still uses these values)
+export const TERRAIN_TAGS = LANDSCAPE_TAGS
+
+export const ACTIVITY_TAGS = [
+  'fishing', 'hunting', 'hiking', 'trail', 'walk-in',
+  'swimming', 'boating', 'boat ramp', 'primitive',
 ]

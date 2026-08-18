@@ -10,6 +10,7 @@ const defaultFilters = {
   pets_allowed: false,
   wildlife_tags: [],
   terrain_tags: [],
+  activity_tags: [],
   availStart: null,
   availEnd: null,
 }

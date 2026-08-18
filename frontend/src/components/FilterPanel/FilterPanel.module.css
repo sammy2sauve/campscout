@@ -36,6 +36,13 @@
   border: none;
   text-decoration: underline;
   padding: 0;
+  min-height: 24px;
+}
+
+.clearBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
 }
 
 .section {
@@ -59,12 +66,14 @@
   padding: 4px 0;
   cursor: pointer;
   font-size: 13px;
+  min-height: 28px;
 }
 
 .checkLabel input[type="checkbox"] {
   accent-color: var(--color-primary);
   width: 14px;
   height: 14px;
+  flex-shrink: 0;
 }
 
 .datePickers {
@@ -79,6 +88,8 @@
   border: 1px solid var(--color-border);
   border-radius: 4px;
   font-size: 13px;
+  background: var(--color-bg);
+  color: var(--color-text);
   outline: none;
 }
 
@@ -86,8 +97,116 @@
   border-color: var(--color-primary);
 }
 
-.pills {
+/* ── Emblem icon button grids ── */
+.emblemGrid3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+}
+
+.emblemGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+
+.emblemBtn {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 4px 5px;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 52px;
+}
+
+.emblemBtn:hover {
+  border-color: var(--color-caution);
+  background: #e0cca8;
+}
+
+.emblemBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.emblemActive {
+  border-color: var(--color-caution);
+  background: #c4622d1a;
+  color: var(--color-caution);
+}
+
+.emblemIcon {
+  display: flex;
+  width: 20px;
+  height: 20px;
+}
+
+.emblemIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.emblemLabel {
+  font-size: 10px;
+  text-align: center;
+  line-height: 1.2;
+}
+
+/* ── Terrain color-dot buttons ── */
+.terrainGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 5px;
+}
+
+.terrainBtn {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 7px;
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: pointer;
+  font-size: 11px;
+  text-align: left;
+  line-height: 1.2;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 36px;
+}
+
+.terrainBtn:hover {
+  border-color: var(--terrain-btn-color, var(--color-border));
+  background: #e0cca8;
+}
+
+.terrainBtn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.terrainActive {
+  border-color: var(--terrain-btn-color);
+  background: color-mix(in srgb, var(--terrain-btn-color) 15%, transparent);
+}
+
+.terrainDot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--terrain-btn-color, #888);
+  flex-shrink: 0;
+}
+
+.terrainLabel {
+  font-size: 10px;
+  line-height: 1.2;
 }

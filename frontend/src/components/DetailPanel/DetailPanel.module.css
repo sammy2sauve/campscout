@@ -1,3 +1,5 @@
+/* ── Panel shell ────────────────────────────────────────────────────────── */
+
 .panel {
   width: var(--detail-width);
   min-width: var(--detail-width);
@@ -9,25 +11,6 @@
   z-index: 10;
 }
 
-.topBar {
-  display: flex;
-  justify-content: flex-end;
-  padding: 8px 10px 4px;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.closeBtn {
-  background: none;
-  border: none;
-  font-size: 16px;
-  color: var(--color-text-muted);
-  padding: 4px 8px;
-  border-radius: 4px;
-  line-height: 1;
-}
-
-.closeBtn:hover { background: var(--color-bg); }
-
 .center {
   flex: 1;
   display: flex;
@@ -35,59 +18,257 @@
   justify-content: center;
 }
 
-.body {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+/* ── Sticky top: photo + name bar ──────────────────────────────────────── */
+
+.stickyTop {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
-.heading {
+.nameBar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 7px 12px;
+  gap: 8px;
+  background: var(--color-panel);
+}
+
+.nameGroup {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
+  flex: 1;
+  min-width: 0;
 }
 
 .name {
-  font-size: 17px;
+  font-size: 15px;
   font-weight: 700;
   line-height: 1.3;
+  color: var(--color-text);
 }
 
 .state {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
   font-weight: 500;
+  flex-shrink: 0;
 }
 
-.meta {
-  font-size: 13px;
+.closeBtn {
+  background: none;
+  border: none;
+  font-size: 16px;
   color: var(--color-text-muted);
-  margin-top: -10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
 }
 
-.reserveLink {
-  display: inline-block;
-  font-size: 13px;
-  color: var(--color-primary);
-  text-decoration: none;
-  font-weight: 500;
-  margin-top: -8px;
+.closeBtn:hover { background: var(--color-bg); }
+
+/* ── Scrollable body ────────────────────────────────────────────────────── */
+
+.body {
+  flex: 1;
+  overflow-y: auto;
 }
 
-.reserveLink:hover { text-decoration: underline; }
+/* ── Summary section ────────────────────────────────────────────────────── */
+
+.summarySection {
+  padding: 10px 14px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* ── Description / detail section ──────────────────────────────────────── */
+
+.detailSection {
+  border-top: 2px solid var(--color-border);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: var(--color-bg);
+}
+
+/* ── Shared section label ───────────────────────────────────────────────── */
 
 .sectionTitle {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--color-text-muted);
+  margin-bottom: 5px;
+}
+
+/* ── Jump buttons (scroll between sections) ─────────────────────────────── */
+
+.jumpBtn {
+  align-self: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: none;
+  border: 1px solid var(--color-primary);
+  border-radius: 12px;
+  cursor: pointer;
+  padding: 4px 14px;
+  transition: background 0.12s, color 0.12s;
+}
+
+.jumpBtn:hover {
+  background: var(--color-primary);
+  color: #fff;
+}
+
+/* ── Weather card ───────────────────────────────────────────────────────── */
+
+.wxCard {
+  display: flex;
+  gap: 0;
+  background: var(--color-bg);
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+}
+
+.wxPeriod {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 8px 8px;
+  text-align: center;
+  gap: 2px;
+}
+
+.wxPeriod + .wxPeriod {
+  border-left: 1px solid var(--color-border);
+  background: color-mix(in srgb, var(--color-panel) 60%, var(--color-bg) 40%);
+}
+
+.wxEmoji {
+  font-size: 28px;
+  line-height: 1;
+}
+
+.wxTemp {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--color-text);
+  line-height: 1.1;
+}
+
+.wxPeriodLabel {
+  font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: var(--color-text-muted);
-  margin-bottom: 7px;
+  font-weight: 600;
 }
+
+.wxDesc {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  line-height: 1.3;
+}
+
+.wxPrecip {
+  font-size: 11px;
+  color: var(--color-info);
+}
+
+/* ── Availability pill ──────────────────────────────────────────────────── */
+
+.availPillGood {
+  display: inline-block;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--color-primary);
+  border: none;
+  border-radius: 20px;
+  padding: 6px 18px;
+  cursor: pointer;
+  transition: opacity 0.12s;
+  text-align: center;
+  width: 100%;
+}
+
+.availPillGood:hover { opacity: 0.88; }
+
+.availPillNone {
+  display: inline-block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 20px;
+  padding: 6px 18px;
+  cursor: default;
+  text-align: center;
+  width: 100%;
+}
+
+/* ── Icon bubble rows (Activities / Landscape / Wildlife) ───────────────── */
+
+.bubbleRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.iconBubble {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-accent);
+  cursor: default;
+  transition: border-color 0.1s, background 0.1s;
+}
+
+.iconBubble:hover {
+  background: var(--color-panel);
+  border-color: var(--color-accent);
+}
+
+.iconBubble span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.iconBubble svg {
+  width: 18px;
+  height: 18px;
+}
+
+.dotBubble {
+  display: inline-block;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  cursor: default;
+  flex-shrink: 0;
+}
+
+/* ── Amenity chips ──────────────────────────────────────────────────────── */
 
 .amenityRow {
   display: flex;
@@ -96,41 +277,59 @@
 }
 
 .amenityChip {
-  padding: 3px 10px;
+  padding: 3px 9px;
   background: var(--color-primary-light);
   color: var(--color-primary);
   border-radius: 10px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 500;
 }
 
-.tagRow {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px;
+/* ── Reserve link + meta ────────────────────────────────────────────────── */
+
+.meta {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 0 0 3px;
 }
+
+.reserveLink {
+  display: inline-block;
+  font-size: 13px;
+  color: var(--color-primary);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.reserveLink:hover { text-decoration: underline; }
+
+/* ── Full description text ──────────────────────────────────────────────── */
 
 .description {
-  font-size: 13px;
-  line-height: 1.6;
+  font-size: 14px;
+  line-height: 1.65;
   color: var(--color-text);
-  white-space: pre-wrap;
+  margin: 0;
 }
+
+/* ── Empty / loading states ─────────────────────────────────────────────── */
 
 .empty {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--color-text-muted);
   font-style: italic;
+  margin: 0;
 }
 
-/* Weather */
+/* ── Weather (full 7-day, WeatherSection.jsx) ───────────────────────────── */
+
 .staleWarning {
   padding: 6px 10px;
-  background: #fff8e1;
+  background: #e8d8a0;
   border: 1px solid var(--color-stale);
   border-radius: 4px;
   font-size: 12px;
-  color: #7d5a00;
+  color: #5a3e00;
   margin-bottom: 8px;
 }
 
@@ -169,7 +368,7 @@
 
 .weatherPeriod.night {
   border-left: 1px solid var(--color-border);
-  background: #f9f9f8;
+  background: #d4c9aa;
 }
 
 .periodLabel {
@@ -195,7 +394,8 @@
   line-height: 1.3;
 }
 
-/* Alerts */
+/* ── Alerts (AlertsSection.jsx) ─────────────────────────────────────────── */
+
 .alertsList {
   display: flex;
   flex-direction: column;
@@ -245,36 +445,10 @@
   overflow-y: auto;
 }
 
-/* Availability */
-.availSummary {
+/* ── Tag rows (detail section) ──────────────────────────────────────────── */
+
+.tagRow {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.availCount {
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.availGood { color: var(--color-primary); }
-.availNone { color: var(--color-danger); }
-
-.availLabel {
-  font-size: 13px;
-  color: var(--color-text-muted);
-  font-weight: 400;
-}
-
-.availBreakdown {
-  font-size: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.availRow {
-  display: flex;
-  justify-content: space-between;
-  color: var(--color-text-muted);
+  flex-wrap: wrap;
+  gap: 5px;
 }

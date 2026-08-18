@@ -23,6 +23,7 @@ export async function fetchCampgrounds({
   pets_allowed,
   wildlife_tags,
   terrain_tags,
+  activity_tags,
   limit = 200,
   offset = 0,
 } = {}) {
@@ -36,6 +37,7 @@ export async function fetchCampgrounds({
     pets_allowed: pets_allowed || undefined,
     wildlife_tags: wildlife_tags?.length ? wildlife_tags.join(',') : undefined,
     terrain_tags: terrain_tags?.length ? terrain_tags.join(',') : undefined,
+    activity_tags: activity_tags?.length ? activity_tags.join(',') : undefined,
     limit,
     offset,
   })

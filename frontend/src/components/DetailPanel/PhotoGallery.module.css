@@ -1,0 +1,124 @@
+/* ── Photo strip ─────────────────────────────────────────────────────────── */
+
+.stripWrap {
+  position: relative;
+}
+
+.strip {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+}
+
+.strip::-webkit-scrollbar { display: none; }
+
+.photo {
+  flex: 0 0 100%;
+  width: 100%;
+  height: 210px;
+  object-fit: cover;
+  display: block;
+  scroll-snap-align: start;
+  cursor: zoom-in;
+}
+
+/* Scroll hint badge — bottom-right corner */
+.hint {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  background: rgba(20, 14, 6, 0.72);
+  color: #e8dfc8;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 10px;
+  pointer-events: none;
+  letter-spacing: 0.03em;
+}
+
+/* ── Lightbox ─────────────────────────────────────────────────────────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lightboxImg {
+  max-width: 90vw;
+  max-height: 88vh;
+  object-fit: contain;
+  border-radius: 2px;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.6);
+  cursor: default;
+}
+
+/* Close button — top right */
+.closeBtn {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  color: #fff;
+  font-size: 18px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  z-index: 9001;
+  line-height: 1;
+}
+
+.closeBtn:hover { background: rgba(255, 255, 255, 0.24); }
+
+/* Prev / next arrow buttons */
+.navBtn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  color: #fff;
+  font-size: 40px;
+  width: 52px;
+  height: 80px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  line-height: 1;
+  z-index: 9001;
+}
+
+.navBtn:hover { background: rgba(255, 255, 255, 0.22); }
+
+.navLeft  { left: 16px; }
+.navRight { right: 16px; }
+
+/* Photo counter — bottom center */
+.lightboxCounter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 13px;
+  font-weight: 500;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 4px 14px;
+  border-radius: 10px;
+  pointer-events: none;
+}
