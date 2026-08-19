@@ -24,6 +24,106 @@
   letter-spacing: -0.02em;
   white-space: nowrap;
   color: #fff;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+
+.logo:hover {
+  background: rgba(255,255,255,0.12);
+}
+
+.navDivider {
+  width: 1px;
+  height: 20px;
+  background: rgba(255,255,255,0.25);
+  flex-shrink: 0;
+}
+
+/* ── Region switcher dropdown ──────────────────────────── */
+
+.regionSwitcher {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.regionBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255,255,255,0.1);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+}
+
+.regionBtn:hover {
+  background: rgba(255,255,255,0.18);
+}
+
+.chevron {
+  font-size: 11px;
+  opacity: 0.75;
+  transition: transform 0.18s;
+}
+
+.chevronOpen {
+  transform: rotate(180deg);
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 200px;
+  background: #2c1f0e;
+  border: 1px solid rgba(200, 168, 112, 0.3);
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 9999;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+
+.dropdownItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: #e8dfc8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s;
+}
+
+.dropdownItem:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.dropdownItemActive {
+  background: rgba(200, 168, 112, 0.18);
+  color: #c8a870;
+  font-weight: 700;
+}
+
+.dropdownIcon {
+  font-size: 15px;
+  line-height: 1;
 }
 
 .loadingDot {
