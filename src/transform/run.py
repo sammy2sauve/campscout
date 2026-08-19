@@ -6,10 +6,11 @@ Steps run in order:
   2. nps_link         — enrich campgrounds with NPS data
   3. noaa_bootstrap   — resolve NOAA grid IDs for new campgrounds
   4. campsites        — from raw_rec_campsites
-  5. availability     — from raw_rec_availability
+  5. availability     — from raw_rec_availability (upsert, not append)
   6. alerts           — from raw_nps_alerts
   7. weather          — from raw_noaa_forecasts
   8. tags             — extract wildlife/terrain tags
+  8.5. prune_stale    — delete past-date availability + weather rows
 
 Run standalone:
     python -m src.transform.run
@@ -23,9 +24,11 @@ from datetime import date, datetime, timezone
 
 import httpx
 from dotenv import load_dotenv
+from sqlalchemy import text
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
 
+from ..models.amenity_flags import AmenityFlag, dict_to_flags
 from ..storage.database import SessionLocal
 from ..storage.models import (
     AvailabilitySnapshot,
@@ -54,6 +57,20 @@ load_dotenv()
 log = logging.getLogger(__name__)
 
 NOAA_BASE = "https://api.weather.gov"
+
+# Region → state mapping (mirrors ingestion/recreation_gov.py)
+_REGION_BY_STATE: dict[str, str] = {}
+_REGION_STATES = {
+    "southeast":   ["FL", "GA", "AL", "MS", "TN", "NC", "SC", "VA", "WV", "KY", "AR"],
+    "northeast":   ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA", "MD", "DE"],
+    "great_lakes": ["OH", "IN", "IL", "MI", "WI", "MN", "IA", "MO"],
+    "plains":      ["ND", "SD", "NE", "KS", "OK", "TX"],
+    "mountain":    ["MT", "ID", "WY", "CO", "NM", "UT", "AZ", "NV"],
+    "pacific_west": ["CA", "OR", "WA"],
+}
+for _rid, _states in _REGION_STATES.items():
+    for _s in _states:
+        _REGION_BY_STATE[_s] = _rid
 
 
 # ---------------------------------------------------------------------------
@@ -96,7 +113,13 @@ def transform_campgrounds(db: Session) -> None:
         if addrs:
             cg.state_code = addrs[0].get("AddressStateCode")
 
-        cg.ada_accessible = bool(f.get("FacilityAdaAccess", ""))
+        # ADA flag goes into amenity_flags
+        if f.get("FacilityAdaAccess", ""):
+            cg.amenity_flags = cg.amenity_flags | int(AmenityFlag.ADA_ACCESSIBLE)
+
+        # Assign region from state code
+        if cg.state_code:
+            cg.region_id = _REGION_BY_STATE.get(cg.state_code.upper())
 
     db.commit()
     log.info("Campgrounds table: %d rows", db.query(Campground).count())
@@ -125,9 +148,12 @@ def transform_nps_link(db: Session) -> None:
 
         cg.nps_id = nps["id"]
         amenities = parse_nps_amenities(nps)
-        cg.has_toilets = amenities["has_toilets"]
-        cg.has_showers = amenities["has_showers"]
-        cg.has_drinking_water = amenities["has_drinking_water"]
+        cg.amenity_flags = dict_to_flags({
+            **amenities,
+            "has_electricity": bool(cg.amenity_flags & int(AmenityFlag.ELECTRICITY)),
+            "pets_allowed":    bool(cg.amenity_flags & int(AmenityFlag.PETS_ALLOWED)),
+            "ada_accessible":  bool(cg.amenity_flags & int(AmenityFlag.ADA_ACCESSIBLE)),
+        })
         linked += 1
 
     db.commit()
@@ -171,7 +197,6 @@ def transform_noaa_bootstrap(db: Session) -> None:
     ) as client:
         for cg in unbooted:
             # Extract lat/lon from PostGIS geometry
-            from sqlalchemy import func, text
             row = db.execute(
                 text("SELECT ST_Y(location::geometry), ST_X(location::geometry) FROM campgrounds WHERE id = :id"),
                 {"id": cg.id},
@@ -251,27 +276,31 @@ def transform_campsites(db: Session) -> None:
 
         db.commit()
 
-    # Roll up has_electricity to the campground level
+    # Roll up electricity to campground amenity_flags
     for cg in db.query(Campground).all():
         has_any = (
             db.query(Campsite)
             .filter_by(campground_id=cg.id, has_electricity=True)
             .first()
         )
-        cg.has_electricity = has_any is not None
+        if has_any:
+            cg.amenity_flags = cg.amenity_flags | int(AmenityFlag.ELECTRICITY)
+        else:
+            cg.amenity_flags = cg.amenity_flags & ~int(AmenityFlag.ELECTRICITY)
 
     db.commit()
     log.info("Campsites table: %d rows", db.query(Campsite).count())
 
 
 # ---------------------------------------------------------------------------
-# Step 5: availability
+# Step 5: availability (upsert model)
 # ---------------------------------------------------------------------------
 
 def transform_availability(db: Session) -> None:
     """
     Populate availability_snapshots from raw_rec_availability.
-    Uses bulk inserts (chunked) to avoid per-row round-trips to Neon.
+    Uses upsert (ON CONFLICT DO UPDATE) — not append.
+    Bulk-inserts in chunks to avoid per-row round-trips.
     """
     raw_rows = db.query(RawRecAvailability).all()
     log.info("Processing %d raw availability rows", len(raw_rows))
@@ -282,7 +311,13 @@ def transform_availability(db: Session) -> None:
         for cs in db.query(Campsite.rec_campsite_id, Campsite.id).all()
     }
 
-    inserted = 0
+    # Build a lookup of facility_id → campground ORM object (for timestamp update)
+    facility_cg_map: dict[str, Campground] = {
+        cg.rec_facility_id: cg
+        for cg in db.query(Campground).all()
+    }
+
+    upserted = 0
     CHUNK = 1000
 
     for raw in raw_rows:
@@ -309,18 +344,40 @@ def transform_availability(db: Session) -> None:
                 })
 
                 if len(batch) >= CHUNK:
-                    db.execute(pg_insert(AvailabilitySnapshot).on_conflict_do_nothing(), batch)
+                    db.execute(
+                        pg_insert(AvailabilitySnapshot)
+                        .on_conflict_do_update(
+                            index_elements=["campsite_id", "date"],
+                            set_={"status": pg_insert(AvailabilitySnapshot).excluded.status,
+                                  "fetched_at": pg_insert(AvailabilitySnapshot).excluded.fetched_at},
+                        ),
+                        batch,
+                    )
                     db.commit()
-                    inserted += len(batch)
-                    log.info("  ...%d snapshots inserted", inserted)
+                    upserted += len(batch)
+                    log.info("  ...%d snapshots upserted", upserted)
                     batch = []
 
         if batch:
-            db.execute(pg_insert(AvailabilitySnapshot).on_conflict_do_nothing(), batch)
+            db.execute(
+                pg_insert(AvailabilitySnapshot)
+                .on_conflict_do_update(
+                    index_elements=["campsite_id", "date"],
+                    set_={"status": pg_insert(AvailabilitySnapshot).excluded.status,
+                          "fetched_at": pg_insert(AvailabilitySnapshot).excluded.fetched_at},
+                ),
+                batch,
+            )
             db.commit()
-            inserted += len(batch)
+            upserted += len(batch)
 
-    log.info("Availability snapshots: %d inserted", inserted)
+        # Update availability_fetched_at on the parent campground
+        cg = facility_cg_map.get(raw.facility_id)
+        if cg is not None:
+            cg.availability_fetched_at = datetime.now(timezone.utc)
+
+    db.commit()
+    log.info("Availability snapshots: %d upserted", upserted)
 
 
 # ---------------------------------------------------------------------------
@@ -490,21 +547,41 @@ def transform_tags(db: Session) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Step 8.5: prune stale data
+# ---------------------------------------------------------------------------
+
+def prune_stale_data(db: Session) -> None:
+    """
+    Delete past-date availability and weather rows.
+    Keeps the rolling 90-day window clean — no unbounded growth.
+    """
+    avail_deleted = db.execute(
+        text("DELETE FROM availability_snapshots WHERE date < CURRENT_DATE")
+    ).rowcount
+    weather_deleted = db.execute(
+        text("DELETE FROM weather_forecasts WHERE forecast_date < CURRENT_DATE")
+    ).rowcount
+    db.commit()
+    log.info("Pruned %d past availability rows, %d past weather rows", avail_deleted, weather_deleted)
+
+
+# ---------------------------------------------------------------------------
 # Orchestrator
 # ---------------------------------------------------------------------------
 
 ALL_STEPS = ["campgrounds", "nps_link", "noaa_bootstrap", "campsites",
-             "availability", "alerts", "weather", "tags"]
+             "availability", "alerts", "weather", "tags", "prune_stale"]
 
 _STEP_FNS = {
-    "campgrounds": transform_campgrounds,
-    "nps_link": transform_nps_link,
+    "campgrounds":   transform_campgrounds,
+    "nps_link":      transform_nps_link,
     "noaa_bootstrap": transform_noaa_bootstrap,
-    "campsites": transform_campsites,
-    "availability": transform_availability,
-    "alerts": transform_alerts,
-    "weather": transform_weather,
-    "tags": transform_tags,
+    "campsites":     transform_campsites,
+    "availability":  transform_availability,
+    "alerts":        transform_alerts,
+    "weather":       transform_weather,
+    "tags":          transform_tags,
+    "prune_stale":   prune_stale_data,
 }
 
 

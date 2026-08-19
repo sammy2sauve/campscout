@@ -75,16 +75,27 @@
 
 .body {
   flex: 1;
-  overflow-y: auto;
+  overflow-y: scroll;
+  scroll-snap-type: y mandatory;
+  scroll-behavior: smooth;
 }
 
 /* ── Summary section ────────────────────────────────────────────────────── */
 
 .summarySection {
-  padding: 10px 14px 6px;
+  padding: 8px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+  /* Scroll snap: summary fills full body height so only one section is visible */
+  scroll-snap-align: start;
+  min-height: 100%;
+  box-sizing: border-box;
+}
+
+/* Flexible spacer that pushes the jump button to the bottom */
+.snapSpacer {
+  flex: 1;
 }
 
 /* ── Description / detail section ──────────────────────────────────────── */
@@ -96,6 +107,10 @@
   flex-direction: column;
   gap: 16px;
   background: var(--color-bg);
+  /* Scroll snap: description section also anchors to top of body */
+  scroll-snap-align: start;
+  min-height: 100%;
+  box-sizing: border-box;
 }
 
 /* ── Shared section label ───────────────────────────────────────────────── */
@@ -129,64 +144,67 @@
   color: #fff;
 }
 
-/* ── Weather card ───────────────────────────────────────────────────────── */
+/* ── 7-day weather strip ────────────────────────────────────────────────── */
 
-.wxCard {
-  display: flex;
-  gap: 0;
+.wxStrip {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
   background: var(--color-bg);
+  border: 1px solid var(--color-border);
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--color-border);
 }
 
-.wxPeriod {
-  flex: 1;
+.wxCol {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 10px 8px 8px;
+  padding: 5px 2px 6px;
+  gap: 1px;
   text-align: center;
-  gap: 2px;
+  border-right: 1px solid var(--color-border);
 }
 
-.wxPeriod + .wxPeriod {
-  border-left: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-panel) 60%, var(--color-bg) 40%);
-}
+.wxCol:last-child { border-right: none; }
 
-.wxEmoji {
-  font-size: 28px;
-  line-height: 1;
-}
-
-.wxTemp {
-  font-size: 22px;
+.wxColDay {
+  font-size: 9px;
   font-weight: 700;
-  color: var(--color-text);
-  line-height: 1.1;
-}
-
-.wxPeriodLabel {
-  font-size: 10px;
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.04em;
   color: var(--color-text-muted);
-  font-weight: 600;
 }
 
-.wxDesc {
-  font-size: 11px;
-  color: var(--color-text-muted);
-  line-height: 1.3;
+.wxColEmoji { font-size: 15px; line-height: 1.1; }
+.wxColTemp  { font-size: 12px; font-weight: 700; color: var(--color-text); }
+
+.wxColDivider {
+  width: 60%;
+  height: 1px;
+  background: var(--color-border);
+  margin: 2px 0;
+  flex-shrink: 0;
 }
 
-.wxPrecip {
-  font-size: 11px;
-  color: var(--color-info);
-}
+.wxColNightEmoji { font-size: 12px; line-height: 1.1; opacity: 0.65; }
+.wxColNightTemp  { font-size: 10px; color: var(--color-text-muted); }
 
 /* ── Availability pill ──────────────────────────────────────────────────── */
+
+.availPillEmpty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) 7%, var(--color-bg) 93%);
+  border: 1.5px dashed var(--color-accent);
+  border-radius: 20px;
+  padding: 8px 16px;
+  width: 100%;
+}
 
 .availPillGood {
   display: inline-block;
@@ -257,6 +275,16 @@
 .iconBubble svg {
   width: 18px;
   height: 18px;
+}
+
+.bubbleDivider {
+  display: inline-block;
+  width: 1px;
+  height: 24px;
+  background: var(--color-border);
+  align-self: center;
+  margin: 0 2px;
+  flex-shrink: 0;
 }
 
 .dotBubble {
@@ -443,6 +471,51 @@
   line-height: 1.5;
   max-height: 100px;
   overflow-y: auto;
+}
+
+/* ── Compact alerts (summary) ───────────────────────────────────────────── */
+
+.alertsCompact {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: color-mix(in srgb, var(--color-danger) 5%, var(--color-bg) 95%);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 25%, var(--color-border) 75%);
+  border-radius: 6px;
+  padding: 8px 10px;
+}
+
+.alertCompactRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+}
+
+.alertCompactBadge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  color: #fff;
+  padding: 2px 6px;
+  border-radius: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.alertCompactTitle {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--color-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.alertCompactMore {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  margin: 0;
 }
 
 /* ── Tag rows (detail section) ──────────────────────────────────────────── */

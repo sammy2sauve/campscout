@@ -10,7 +10,9 @@ can be constructed directly from ORM instances via .model_validate(orm_obj).
 import re
 from datetime import date, datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+from ..models.amenity_flags import flags_to_dict
 
 
 def _strip_html(text: str) -> str:
@@ -23,6 +25,34 @@ class LocationSchema(BaseModel):
     lon: float
 
 
+class RegionSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    states: list[str]
+    center_lat: float
+    center_lon: float
+    default_zoom: int
+    bbox: dict  # {min_lon, min_lat, max_lon, max_lat}
+    campground_count: int
+
+    @model_validator(mode="before")
+    @classmethod
+    def build_bbox(cls, data):
+        """Accept a raw dict (e.g. from DB row) and synthesise the bbox sub-dict."""
+        if isinstance(data, dict):
+            if "bbox" not in data:
+                data = dict(data)
+                data["bbox"] = {
+                    "min_lon": data.get("bbox_min_lon"),
+                    "min_lat": data.get("bbox_min_lat"),
+                    "max_lon": data.get("bbox_max_lon"),
+                    "max_lat": data.get("bbox_max_lat"),
+                }
+        return data
+
+
 class CampgroundSummary(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -30,13 +60,18 @@ class CampgroundSummary(BaseModel):
     rec_facility_id: str
     name: str
     state_code: str | None = None
+    region_id: str | None = None
     location: LocationSchema | None = None
-    has_electricity: bool | None = None
-    has_showers: bool | None = None
-    has_toilets: bool | None = None
-    has_drinking_water: bool | None = None
-    pets_allowed: bool | None = None
-    ada_accessible: bool | None = None
+    amenity_flags: int = 0
+
+    # Decoded amenity fields — populated by model_validator below
+    has_electricity: bool = False
+    has_showers: bool = False
+    has_toilets: bool = False
+    has_drinking_water: bool = False
+    pets_allowed: bool = False
+    ada_accessible: bool = False
+
     wildlife_tags: list[str] | None = None
     terrain_tags: list[str] | None = None
     activity_tags: list[str] | None = None
@@ -54,6 +89,18 @@ class CampgroundSummary(BaseModel):
             return {"lat": shape.y, "lon": shape.x}
         except Exception:
             return None
+
+    @model_validator(mode="after")
+    def expand_amenity_flags(self):
+        """Decode amenity_flags integer into named boolean fields."""
+        decoded = flags_to_dict(self.amenity_flags)
+        self.has_toilets = decoded["has_toilets"]
+        self.has_showers = decoded["has_showers"]
+        self.has_drinking_water = decoded["has_drinking_water"]
+        self.has_electricity = decoded["has_electricity"]
+        self.pets_allowed = decoded["pets_allowed"]
+        self.ada_accessible = decoded["ada_accessible"]
+        return self
 
 
 class CampgroundDetail(CampgroundSummary):

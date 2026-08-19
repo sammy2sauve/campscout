@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import {
   MapContainer, TileLayer, Marker, Tooltip,
-  LayersControl, useMapEvents, useMap,
+  LayersControl, Polygon, useMapEvents, useMap,
 } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useApp } from '../../context/AppContext.jsx'
@@ -13,28 +13,17 @@ import { FreshnessBadge } from './FreshnessBadge.jsx'
 import { MapLegend } from './MapLegend.jsx'
 import styles from './MapView.module.css'
 
-// Atlanta center — covers SE US target region on load
-const CENTER = [33.7490, -84.3880]
-const ZOOM = 7
+// Default center (Atlanta) — overridden when a region is selected
+const DEFAULT_CENTER = [33.7490, -84.3880]
+const DEFAULT_ZOOM = 7
 
 // ── Campground marker (single SVG — no overflow issues) ───────────────────
 
-/**
- * Build a self-contained SVG tent marker.
- * Everything lives inside one SVG viewBox so the terrain ring and
- * wildlife badge never clip against the Leaflet icon container.
- *
- * viewBox "-6 -14 44 52" gives room for:
- *   - terrain ring (circle r=17 centered at 16,16)
- *   - badge circle (center 33, -6, r=9) at top-right
- */
 function makeCampgroundSVG(fill, terrainColor, wildlifeIconInner) {
   const ring = terrainColor
     ? `<circle cx="16" cy="18" r="17" fill="none" stroke="${terrainColor}" stroke-width="3.5" opacity="0.88"/>`
     : ''
 
-  // Badge: circle at top-right, wildlife icon inside scaled to fit
-  // Icon (24×24 original) scaled 0.58× and centered at badge center (33,-6)
   const badge = wildlifeIconInner
     ? `<circle cx="33" cy="-6" r="9" fill="#2c1f0e" stroke="#c8a870" stroke-width="1.4"/>
        <g transform="translate(33,-6) scale(0.58) translate(-12,-12)" fill="#e09050">${wildlifeIconInner}</g>`
@@ -89,7 +78,7 @@ function makeFeatureIcon(type) {
 // ── Feature layer ─────────────────────────────────────────────────────────
 
 function FeatureLayer({ minZoom = 7 }) {
-  const [zoom, setZoom] = useState(ZOOM)
+  const [zoom, setZoom] = useState(DEFAULT_ZOOM)
   useMapEvents({ zoomend: (e) => setZoom(e.target.getZoom()) })
   if (zoom < minZoom) return null
 
@@ -104,6 +93,60 @@ function FeatureLayer({ minZoom = 7 }) {
       </Tooltip>
     </Marker>
   ))
+}
+
+// ── Region grey-mask overlay ───────────────────────────────────────────────
+// Uses a polygon-with-hole: outer ring covers the whole world,
+// inner hole shows only the selected region's bbox unmasked.
+
+function RegionMask({ regionData }) {
+  if (!regionData) return null
+
+  const { bbox } = regionData
+  if (!bbox) return null
+
+  const { min_lat, min_lon, max_lat, max_lon } = bbox
+
+  // Outer ring: entire world (clockwise)
+  const outer = [
+    [-90, -180], [-90, 180], [90, 180], [90, -180], [-90, -180],
+  ]
+
+  // Inner hole: region bbox (counter-clockwise — creates the "window")
+  const hole = [
+    [min_lat, min_lon],
+    [max_lat, min_lon],
+    [max_lat, max_lon],
+    [min_lat, max_lon],
+    [min_lat, min_lon],
+  ]
+
+  return (
+    <Polygon
+      positions={[outer, hole]}
+      pathOptions={{
+        color: 'none',
+        fillColor: '#1a1a1a',
+        fillOpacity: 0.6,
+        stroke: false,
+        interactive: false,
+      }}
+    />
+  )
+}
+
+// ── Region bounds fitter ───────────────────────────────────────────────────
+
+function RegionBoundsFitter({ regionData }) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!regionData?.bbox) return
+    const { min_lat, min_lon, max_lat, max_lon } = regionData.bbox
+    map.fitBounds([[min_lat, min_lon], [max_lat, max_lon]], { padding: [20, 20] })
+  }, [map, regionData])
+
+  return null
 }
 
 // ── Map helpers ───────────────────────────────────────────────────────────
@@ -146,20 +189,30 @@ function SearchCenterWatcher() {
 
 // ── Main component ────────────────────────────────────────────────────────
 
-export function MapView({ campgrounds, dataAsOf, onBboxChange }) {
+export function MapView({ campgrounds, dataAsOf, onBboxChange, regionData }) {
   const { selectedId, setSelectedId } = useApp()
 
   const validCampgrounds = campgrounds.filter(
     (cg) => cg.location?.lat != null && cg.location?.lon != null
   )
 
+  // Derive maxBounds from region if available
+  const maxBounds = regionData?.bbox
+    ? [
+        [regionData.bbox.min_lat - 2, regionData.bbox.min_lon - 2],
+        [regionData.bbox.max_lat + 2, regionData.bbox.max_lon + 2],
+      ]
+    : undefined
+
   return (
     <div className={styles.mapWrapper}>
       <MapContainer
-        center={CENTER}
-        zoom={ZOOM}
+        center={DEFAULT_CENTER}
+        zoom={DEFAULT_ZOOM}
         className={styles.map}
         zoomControl={true}
+        maxBounds={maxBounds}
+        maxBoundsViscosity={0.85}
       >
         {/* Tile layers — OpenTopoMap default shows terrain, rivers, forests, roads */}
         <LayersControl position="topright">
@@ -182,6 +235,10 @@ export function MapView({ campgrounds, dataAsOf, onBboxChange }) {
         <BboxTracker onBboxChange={onBboxChange} />
         <MapRefSetter />
         <SearchCenterWatcher />
+        <RegionBoundsFitter regionData={regionData} />
+
+        {/* Grey mask over areas outside the selected region */}
+        <RegionMask regionData={regionData} />
 
         {/* National forests + parks feature markers */}
         <FeatureLayer minZoom={6} />

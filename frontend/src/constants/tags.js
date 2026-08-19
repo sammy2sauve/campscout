@@ -17,7 +17,7 @@ export const LANDSCAPE_TAGS = [
 // kept for backend compat (terrain_tags column still uses these values)
 export const TERRAIN_TAGS = LANDSCAPE_TAGS
 
+// Canonical activity IDs — must match the group keys in keywords.json
 export const ACTIVITY_TAGS = [
-  'fishing', 'hunting', 'hiking', 'trail', 'walk-in',
-  'swimming', 'boating', 'boat ramp', 'primitive',
+  'fishing', 'hunting', 'hiking', 'swimming', 'boating', 'primitive',
 ]

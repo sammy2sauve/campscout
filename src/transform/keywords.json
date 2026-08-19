@@ -35,13 +35,12 @@
     "waterfront", "lakefront", "riverfront",
     "shaded", "shade"
   ],
-  "activities": [
-    "fishing",
-    "hunting", "hunt",
-    "hiking", "trail",
-    "walk-in", "walk in",
-    "swimming", "swim",
-    "boating", "boat ramp", "marina",
-    "primitive"
-  ]
+  "activities": {
+    "fishing":   ["fishing"],
+    "hunting":   ["hunting", "hunt"],
+    "hiking":    ["hiking", "trail", "walk-in", "walk in"],
+    "swimming":  ["swimming", "swim"],
+    "boating":   ["boating", "boat ramp", "marina"],
+    "primitive": ["primitive"]
+  }
 }

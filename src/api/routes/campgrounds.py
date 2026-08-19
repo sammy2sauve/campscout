@@ -15,6 +15,7 @@ from sqlalchemy.dialects.postgresql import ARRAY as PgARRAY
 from sqlalchemy.orm import Session
 from sqlalchemy.types import String
 
+from ...models.amenity_flags import AmenityFlag
 from ...storage.models import Campground
 from ..deps import get_db
 from ..schemas import CampgroundDetail, CampgroundList, CampgroundSummary
@@ -34,6 +35,7 @@ def list_campgrounds(
     db: Annotated[Session, Depends(get_db)],
     bbox: Annotated[str | None, Query(description="min_lon,min_lat,max_lon,max_lat")] = None,
     state: Annotated[str | None, Query(max_length=2)] = None,
+    region: str | None = None,
     has_electricity: bool | None = None,
     has_showers: bool | None = None,
     has_toilets: bool | None = None,
@@ -45,7 +47,7 @@ def list_campgrounds(
     limit: Annotated[int, Query(ge=1, le=200)] = 50,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> CampgroundList:
-    cache_key = (bbox, state, has_electricity, has_showers, has_toilets,
+    cache_key = (bbox, state, region, has_electricity, has_showers, has_toilets,
                  has_drinking_water, pets_allowed, wildlife_tags, terrain_tags,
                  activity_tags, limit, offset)
 
@@ -74,16 +76,26 @@ def list_campgrounds(
     if state:
         query = query.filter(Campground.state_code == state.upper())
 
-    bool_filters = {
-        "has_electricity": has_electricity,
-        "has_showers": has_showers,
-        "has_toilets": has_toilets,
-        "has_drinking_water": has_drinking_water,
-        "pets_allowed": pets_allowed,
+    if region:
+        query = query.filter(Campground.region_id == region)
+
+    # Bitwise amenity filters — each flag tested with bitwise AND
+    amenity_bit_filters = {
+        AmenityFlag.ELECTRICITY:    has_electricity,
+        AmenityFlag.SHOWERS:        has_showers,
+        AmenityFlag.TOILETS:        has_toilets,
+        AmenityFlag.DRINKING_WATER: has_drinking_water,
+        AmenityFlag.PETS_ALLOWED:   pets_allowed,
     }
-    for col_name, val in bool_filters.items():
-        if val is not None:
-            query = query.filter(getattr(Campground, col_name) == val)
+    for flag, val in amenity_bit_filters.items():
+        if val is True:
+            query = query.filter(
+                Campground.amenity_flags.op("&")(int(flag)) != 0
+            )
+        elif val is False:
+            query = query.filter(
+                Campground.amenity_flags.op("&")(int(flag)) == 0
+            )
 
     if wildlife_tags:
         tags = [t.strip() for t in wildlife_tags.split(",") if t.strip()]

@@ -1,18 +1,19 @@
 """
-Recreation.gov ingestion — facilities (campgrounds) and campsites for SE US.
+Recreation.gov ingestion — facilities (campgrounds) and campsites.
 
 Writes raw API responses to raw_rec_facilities, raw_rec_campsites, and
 raw_rec_availability staging tables.
 
 Run standalone:
     python -m src.ingestion.recreation_gov
+    python -m src.ingestion.recreation_gov --regions southeast --limit 5
     python -m src.ingestion.recreation_gov --states GA NC --limit 5
 """
 import argparse
 import logging
 import os
 import time
-from datetime import date
+from datetime import date, datetime, timezone
 
 import httpx
 from dotenv import load_dotenv
@@ -27,12 +28,21 @@ log = logging.getLogger(__name__)
 RIDB_URL = "https://ridb.recreation.gov/api/v1"
 AVAIL_URL = "https://www.recreation.gov/api/camps/availability/campground"
 
-# SE US states within ~4hr of Atlanta. Intentionally not hardcoded into the
-# data model — just the initial ingestion boundary. See PROBLEM_STATEMENT.md.
-TARGET_STATES = ["GA", "NC", "SC", "TN", "AL"]
+# Region → state mapping (canonical; shared with nps.py and transform)
+REGION_STATES: dict[str, list[str]] = {
+    "southeast":   ["FL", "GA", "AL", "MS", "TN", "NC", "SC", "VA", "WV", "KY", "AR"],
+    "northeast":   ["ME", "NH", "VT", "MA", "RI", "CT", "NY", "NJ", "PA", "MD", "DE"],
+    "great_lakes": ["OH", "IN", "IL", "MI", "WI", "MN", "IA", "MO"],
+    "plains":      ["ND", "SD", "NE", "KS", "OK", "TX"],
+    "mountain":    ["MT", "ID", "WY", "CO", "NM", "UT", "AZ", "NV"],
+    "pacific_west": ["CA", "OR", "WA"],
+}
+
+# Default target: Southeast only (original scope)
+DEFAULT_REGIONS = ["southeast"]
 
 PAGE_SIZE = 50
-MONTHS_AHEAD = 3  # how many months of availability to fetch per run
+MONTHS_AHEAD = 3  # rolling 90-day window
 
 
 def _month_start(year: int, month: int) -> date:
@@ -145,7 +155,18 @@ def ingest_availability(client: httpx.Client, db, facility_id: str, months_ahead
     Writes one row to raw_rec_availability per month.
 
     Uses the unofficial recreation.gov availability endpoint (not RIDB).
+
+    Skips if the campground was fetched within the last 12 hours.
     """
+    from ..storage.models import Campground
+
+    cg = db.query(Campground).filter_by(rec_facility_id=facility_id).one_or_none()
+    if cg is not None and cg.availability_fetched_at is not None:
+        age_hours = (datetime.now(timezone.utc) - cg.availability_fetched_at).total_seconds() / 3600
+        if age_hours < 12:
+            log.info("Skipping availability facility=%s (fetched %.1fh ago)", facility_id, age_hours)
+            return
+
     today = date.today()
     base = _month_start(today.year, today.month)
 
@@ -175,9 +196,32 @@ def ingest_availability(client: httpx.Client, db, facility_id: str, months_ahead
 
         time.sleep(0.5)
 
+    # Record when we successfully fetched availability for this campground
+    if cg is not None:
+        cg.availability_fetched_at = datetime.now(timezone.utc)
+        db.commit()
 
-def run(states: list[str] = TARGET_STATES, limit: int | None = None) -> None:
+
+def run(
+    regions: list[str] = DEFAULT_REGIONS,
+    states: list[str] | None = None,
+    limit: int | None = None,
+) -> None:
+    """
+    Run the Recreation.gov ingestion for the specified regions (or explicit states).
+
+    Args:
+        regions: list of region slugs (e.g. ["southeast", "northeast"])
+        states: explicit state list — overrides regions if provided
+        limit: max facilities to ingest (for testing)
+    """
     api_key = os.environ["RECREATION_GOV_API_KEY"]
+
+    # Resolve states from regions unless explicitly overridden
+    if states is None:
+        states = []
+        for region in regions:
+            states.extend(REGION_STATES.get(region, []))
 
     with (
         httpx.Client(headers={"apikey": api_key}, timeout=30) as client,
@@ -200,10 +244,13 @@ def run(states: list[str] = TARGET_STATES, limit: int | None = None) -> None:
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    parser = argparse.ArgumentParser(description="Ingest Recreation.gov facilities for SE US.")
-    parser.add_argument("--states", nargs="+", default=TARGET_STATES, metavar="STATE",
-                        help="State codes to ingest (default: GA NC SC TN AL)")
+    parser = argparse.ArgumentParser(description="Ingest Recreation.gov facilities.")
+    parser.add_argument("--regions", nargs="+", default=DEFAULT_REGIONS, metavar="REGION",
+                        help=f"Region slugs to ingest (default: {DEFAULT_REGIONS}). "
+                             f"Choices: {list(REGION_STATES.keys())}")
+    parser.add_argument("--states", nargs="+", default=None, metavar="STATE",
+                        help="Explicit state codes — overrides --regions")
     parser.add_argument("--limit", type=int, default=None,
                         help="Max facilities to fetch — useful for testing")
     args = parser.parse_args()
-    run(states=args.states, limit=args.limit)
+    run(regions=args.regions, states=args.states, limit=args.limit)

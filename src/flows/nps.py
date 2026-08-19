@@ -15,11 +15,8 @@ import httpx
 from dotenv import load_dotenv
 from prefect import flow, task
 
-from ..ingestion.nps import (
-    TARGET_STATES,
-    ingest_alerts,
-    ingest_campgrounds,
-)
+from ..ingestion.nps import ingest_alerts, ingest_campgrounds
+from ..ingestion.recreation_gov import DEFAULT_REGIONS, REGION_STATES
 from ..storage.database import SessionLocal
 
 load_dotenv()
@@ -50,13 +47,24 @@ def fetch_alerts(park_codes: list[str]) -> None:
 
 
 @flow(name="nps-ingest")
-def nps_flow(states: list[str] = TARGET_STATES, limit: int | None = None) -> None:
+def nps_flow(
+    regions: list[str] = DEFAULT_REGIONS,
+    states: list[str] | None = None,
+    limit: int | None = None,
+) -> None:
     """
-    Ingest NPS campgrounds and alerts for SE US.
+    Ingest NPS campgrounds and alerts.
 
-    Mirrors the run() logic from src/ingestion/nps.py.
-    Per-park alert failures are already handled inside ingest_alerts.
+    Args:
+        regions: region slugs to ingest (resolved to state lists)
+        states: explicit state override (takes precedence over regions)
+        limit: max campgrounds — useful for testing
     """
+    if states is None:
+        states = []
+        for region in regions:
+            states.extend(REGION_STATES.get(region, []))
+
     park_codes = fetch_campgrounds(states, limit)
     fetch_alerts(park_codes)
 

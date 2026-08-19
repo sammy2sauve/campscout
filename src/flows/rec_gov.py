@@ -7,7 +7,6 @@ it does not duplicate any business logic.
 
 Run standalone:
     python -m src.flows.rec_gov
-    python -m src.flows.rec_gov  (uses TARGET_STATES, no limit)
 """
 import logging
 import os
@@ -17,7 +16,8 @@ from dotenv import load_dotenv
 from prefect import flow, task
 
 from ..ingestion.recreation_gov import (
-    TARGET_STATES,
+    DEFAULT_REGIONS,
+    REGION_STATES,
     ingest_availability,
     ingest_campsites,
     ingest_facilities,
@@ -63,14 +63,24 @@ def fetch_availability(facility_id: str) -> None:
 
 
 @flow(name="rec-gov-ingest")
-def rec_gov_flow(states: list[str] = TARGET_STATES, limit: int | None = None) -> None:
+def rec_gov_flow(
+    regions: list[str] = DEFAULT_REGIONS,
+    states: list[str] | None = None,
+    limit: int | None = None,
+) -> None:
     """
-    Ingest Recreation.gov facilities, campsites, and availability for SE US.
+    Ingest Recreation.gov facilities, campsites, and availability.
 
-    Mirrors the run() logic from src/ingestion/recreation_gov.py:
-    per-facility campsite and availability failures are caught and logged
-    without stopping the remaining facilities.
+    Args:
+        regions: region slugs to ingest (resolved to state lists)
+        states: explicit state override (takes precedence over regions)
+        limit: max facilities — useful for testing
     """
+    if states is None:
+        states = []
+        for region in regions:
+            states.extend(REGION_STATES.get(region, []))
+
     facility_ids = fetch_facilities(states, limit)
     log.info("Ingested %d facilities", len(facility_ids))
 

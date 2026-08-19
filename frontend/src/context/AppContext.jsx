@@ -1,4 +1,4 @@
-import { createContext, useContext, useRef, useState } from 'react'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
 
 const AppContext = createContext(null)
 
@@ -15,12 +15,43 @@ const defaultFilters = {
   availEnd: null,
 }
 
+function getRegionFromUrl() {
+  return new URLSearchParams(window.location.search).get('region') || null
+}
+
+function setRegionInUrl(regionId) {
+  const params = new URLSearchParams(window.location.search)
+  if (regionId) {
+    params.set('region', regionId)
+  } else {
+    params.delete('region')
+  }
+  const newUrl = `${window.location.pathname}${params.toString() ? '?' + params.toString() : ''}`
+  window.history.pushState({}, '', newUrl)
+}
+
 export function AppProvider({ children }) {
   const [selectedId, setSelectedId] = useState(null)
   const [filters, setFilters] = useState(defaultFilters)
   const [searchCenter, setSearchCenter] = useState(null)
+  const [selectedRegion, setSelectedRegionState] = useState(getRegionFromUrl)
   // mapRef is set by MapView on mount so SearchBar can call flyTo
   const mapRef = useRef(null)
+
+  // Sync region to URL whenever it changes
+  function setSelectedRegion(regionId) {
+    setSelectedRegionState(regionId)
+    setRegionInUrl(regionId)
+  }
+
+  // Handle browser back/forward navigation
+  useEffect(() => {
+    function onPopState() {
+      setSelectedRegionState(getRegionFromUrl())
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
 
   function setFilter(key, value) {
     setFilters((prev) => ({ ...prev, [key]: value }))
@@ -45,6 +76,7 @@ export function AppProvider({ children }) {
       selectedId, setSelectedId,
       filters, setFilter, toggleTag, clearFilters,
       searchCenter, setSearchCenter,
+      selectedRegion, setSelectedRegion,
       mapRef,
     }}>
       {children}

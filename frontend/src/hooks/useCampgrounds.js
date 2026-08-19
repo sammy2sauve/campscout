@@ -1,19 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
 import { fetchCampgrounds } from '../api/client.js'
 
-export function useCampgrounds(bbox, filters) {
+export function useCampgrounds(bbox, filters, region) {
   const [campgrounds, setCampgrounds] = useState([])
   const [dataAsOf, setDataAsOf] = useState(null)
   const [loading, setLoading] = useState(false)
   const timerRef = useRef(null)
 
   useEffect(() => {
-    if (!bbox) return
+    if (!bbox && !region) return
     clearTimeout(timerRef.current)
     timerRef.current = setTimeout(async () => {
       setLoading(true)
       try {
-        const result = await fetchCampgrounds({ bbox, ...filters })
+        const result = await fetchCampgrounds({ bbox, region, ...filters })
         setCampgrounds(result.items ?? [])
         setDataAsOf(result.data_as_of ?? null)
       } catch (err) {
@@ -23,7 +23,7 @@ export function useCampgrounds(bbox, filters) {
       }
     }, 400)
     return () => clearTimeout(timerRef.current)
-  }, [bbox, filters])
+  }, [bbox, filters, region])
 
   return { campgrounds, dataAsOf, loading }
 }

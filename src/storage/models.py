@@ -13,6 +13,7 @@ from sqlalchemy import (
     Column,
     Date,
     DateTime,
+    Float,
     ForeignKey,
     Index,
     Integer,
@@ -21,12 +22,30 @@ from sqlalchemy import (
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import JSONB
+from sqlalchemy.orm import relationship
 
 from .database import Base
 
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
+
+
+class Region(Base):
+    __tablename__ = "regions"
+
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    states = Column(ARRAY(String), nullable=False)
+    bbox_min_lon = Column(Float, nullable=False)
+    bbox_min_lat = Column(Float, nullable=False)
+    bbox_max_lon = Column(Float, nullable=False)
+    bbox_max_lat = Column(Float, nullable=False)
+    center_lat = Column(Float, nullable=False)
+    center_lon = Column(Float, nullable=False)
+    default_zoom = Column(Integer, nullable=False, default=6)
+
+    campgrounds = relationship("Campground", back_populates="region")
 
 
 class Campground(Base):
@@ -44,13 +63,15 @@ class Campground(Base):
     reservation_url = Column(String)
     stay_limit = Column(String)
 
-    # Amenities — from NPS structured fields where matched, else null
-    has_toilets = Column(Boolean)
-    has_showers = Column(Boolean)
-    has_drinking_water = Column(Boolean)
-    has_electricity = Column(Boolean)  # true if any campsite has electricity
-    pets_allowed = Column(Boolean)
-    ada_accessible = Column(Boolean)
+    # Amenities — bit-packed integer (see src/models/amenity_flags.py)
+    amenity_flags = Column(Integer, nullable=False, default=0)
+
+    # Region FK — assigned during transform based on state_code
+    region_id = Column(String, ForeignKey("regions.id"), index=True)
+    region = relationship("Region", back_populates="campgrounds")
+
+    # Incremental availability tracking — skip if fetched within last 12 hours
+    availability_fetched_at = Column(DateTime(timezone=True), nullable=True)
 
     # NOAA weather link — bootstrapped once per campground via Points API
     noaa_grid_id = Column(String)       # "FFC/64/133"; null until first fetch
@@ -102,8 +123,8 @@ class Campsite(Base):
 
 class AvailabilitySnapshot(Base):
     """
-    Time-series availability — append-only.
-    Retaining history enables lead-time analysis later.
+    Rolling 90-day availability window — upsert model, not append-only.
+    One row per (campsite_id, date). Past dates pruned after each pipeline run.
     """
 
     __tablename__ = "availability_snapshots"
@@ -115,8 +136,8 @@ class AvailabilitySnapshot(Base):
     fetched_at = Column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (
-        UniqueConstraint("campsite_id", "date", "fetched_at",
-                         name="uq_availability_campsite_date_fetch"),
+        UniqueConstraint("campsite_id", "date",
+                         name="availability_snapshots_campsite_id_date_key"),
         Index("ix_availability_campsite_date", "campsite_id", "date"),
         Index("ix_availability_date_status", "date", "status"),
     )

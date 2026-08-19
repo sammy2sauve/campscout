@@ -4,10 +4,7 @@ import { useCampgroundDetail } from '../../hooks/useCampgroundDetail.js'
 import { useWeather } from '../../hooks/useWeather.js'
 import { useAlerts } from '../../hooks/useAlerts.js'
 import { useAvailability } from '../../hooks/useAvailability.js'
-import { TagPill } from '../shared/TagPill.jsx'
 import { LoadingSpinner } from '../shared/LoadingSpinner.jsx'
-import { WeatherSection } from './WeatherSection.jsx'
-import { AlertsSection } from './AlertsSection.jsx'
 import { PhotoGallery } from './PhotoGallery.jsx'
 import { AvailabilityModal } from './AvailabilityModal.jsx'
 import { getWildlifeIcon, primaryWildlifeGroup } from '../../emblems/wildlifeEmblems.js'
@@ -39,33 +36,66 @@ function wxEmoji(forecast) {
   return '🌤️'
 }
 
-/** Today + Tonight weather card with large emoji emblems */
-function WeatherCard({ rows }) {
-  const today = rows?.find(r => r.is_daytime) ?? null
-  const tonight = rows?.find(r => !r.is_daytime) ?? null
-  if (!today && !tonight) {
-    return <p className={styles.empty}>No weather data.</p>
+/** Compact 7-day horizontal strip — one column per day, day+night stacked */
+function WeatherWeek({ rows, isStale }) {
+  if (!rows?.length) return <p className={styles.empty}>No weather data.</p>
+
+  const grouped = {}
+  for (const r of rows) {
+    if (!grouped[r.forecast_date]) grouped[r.forecast_date] = {}
+    grouped[r.forecast_date][r.is_daytime ? 'day' : 'night'] = r
   }
+  const days = Object.entries(grouped)
+    .sort(([a], [b]) => a.localeCompare(b))
+    .slice(0, 7)
+
   return (
-    <div className={styles.wxCard}>
-      {today && (
-        <div className={styles.wxPeriod}>
-          <span className={styles.wxEmoji} aria-hidden="true">{wxEmoji(today.short_forecast)}</span>
-          <span className={styles.wxTemp}>{today.temperature_f}°F</span>
-          <span className={styles.wxPeriodLabel}>Today</span>
-          <span className={styles.wxDesc}>{today.short_forecast}</span>
-          {today.precip_pct > 0 && (
-            <span className={styles.wxPrecip}>{today.precip_pct}% rain</span>
-          )}
+    <div>
+      {isStale && <div className={styles.staleWarning}>Weather may be outdated.</div>}
+      <div className={styles.wxStrip}>
+        {days.map(([date, { day, night }]) => {
+          const label = new Date(date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short' })
+          return (
+            <div key={date} className={styles.wxCol}>
+              <span className={styles.wxColDay}>{label}</span>
+              <span className={styles.wxColEmoji} aria-hidden="true">{day ? wxEmoji(day.short_forecast) : '—'}</span>
+              <span className={styles.wxColTemp}>{day ? `${day.temperature_f}°` : '—'}</span>
+              <span className={styles.wxColDivider} aria-hidden="true" />
+              <span className={styles.wxColNightEmoji} aria-hidden="true">{night ? wxEmoji(night.short_forecast) : '—'}</span>
+              <span className={styles.wxColNightTemp}>{night ? `${night.temperature_f}°` : '—'}</span>
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
+/** Compact alert rows for the summary — badge + title only */
+const ALERT_COLORS = {
+  Danger: 'var(--color-danger)',
+  'Park Closure': 'var(--color-danger)',
+  Caution: 'var(--color-caution)',
+  Information: 'var(--color-info)',
+}
+
+function AlertsSummary({ alerts }) {
+  if (!alerts?.length) return null
+  return (
+    <div className={styles.alertsCompact}>
+      {alerts.slice(0, 3).map((a, i) => (
+        <div key={i} className={styles.alertCompactRow}>
+          <span
+            className={styles.alertCompactBadge}
+            style={{ background: ALERT_COLORS[a.category] ?? 'var(--color-info)' }}
+          >
+            {a.category ?? 'Alert'}
+          </span>
+          <span className={styles.alertCompactTitle}>{a.title}</span>
         </div>
-      )}
-      {tonight && (
-        <div className={styles.wxPeriod}>
-          <span className={styles.wxEmoji} aria-hidden="true">{wxEmoji(tonight.short_forecast)}</span>
-          <span className={styles.wxTemp}>{tonight.temperature_f}°F</span>
-          <span className={styles.wxPeriodLabel}>Tonight</span>
-          <span className={styles.wxDesc}>{tonight.short_forecast}</span>
-        </div>
+      ))}
+      {alerts.length > 3 && (
+        <p className={styles.alertCompactMore}>+{alerts.length - 3} more</p>
       )}
     </div>
   )
@@ -88,7 +118,12 @@ function IconBubble({ icon, label, dotColor }) {
 /** Clickable availability pill that opens the modal */
 function AvailPill({ data, loading, start, end, onClick }) {
   if (!start || !end) {
-    return <p className={styles.empty}>Set dates in the filter panel to check availability.</p>
+    return (
+      <div className={styles.availPillEmpty}>
+        <span aria-hidden="true">📅</span>
+        Set dates to check availability
+      </div>
+    )
   }
   if (loading) return <p className={styles.empty}>Checking availability…</p>
 
@@ -150,148 +185,131 @@ export function DetailPanel() {
             </div>
           </div>
 
-          {/* ── Scrollable body ───────────────────────────────────────────── */}
+          {/* ── Scrollable body: scroll-snaps between summary and description ── */}
           <div className={styles.body}>
 
-            {/* ══ SUMMARY SECTION ══════════════════════════════════════════ */}
-            <div ref={summaryRef} className={styles.summarySection}>
+            {/* ══ SUMMARY SECTION — fills full body height, jump btn at bottom ══ */}
+            {(() => {
+              // Pre-compute icon lists so JSX stays clean
+              const seenAct = new Set()
+              const actIcons = (detail.activity_tags ?? [])
+                .map(t => ({ icon: getActivityIcon(t), label: t }))
+                .filter(({ icon }) => icon && !seenAct.has(icon) && seenAct.add(icon))
 
-              {/* Weather emblems */}
-              <section>
-                <h3 className={styles.sectionTitle}>Weather</h3>
-                <WeatherCard rows={weatherRows} />
-              </section>
+              const seenTer = new Set()
+              const terIcons = (detail.terrain_tags ?? [])
+                .map(t => ({ icon: getTerrainIcon(t), label: t, dotColor: getTerrainColor(t) }))
+                .filter(({ icon }) => icon && !seenTer.has(icon) && seenTer.add(icon))
+              const terDots = (detail.terrain_tags ?? [])
+                .filter(t => !getTerrainIcon(t) && getTerrainColor(t))
+                .map(t => ({ label: t, dotColor: getTerrainColor(t) }))
 
-              {/* Availability */}
-              <section>
-                <h3 className={styles.sectionTitle}>Availability</h3>
-                <AvailPill
-                  data={availData}
-                  loading={availLoading}
-                  start={filters.availStart}
-                  end={filters.availEnd}
-                  onClick={() => setShowAvailModal(true)}
-                />
-              </section>
+              const seenWild = new Set()
+              const wildIcons = (detail.wildlife_tags ?? [])
+                .map(t => {
+                  const group = primaryWildlifeGroup([t])
+                  const icon = getWildlifeIcon(group)
+                  return { icon, label: t }
+                })
+                .filter(({ icon }) => icon && !seenWild.has(icon) && seenWild.add(icon))
 
-              {/* Activities icon row */}
-              {detail.activity_tags?.length > 0 && (() => {
-                const icons = [...new Set(
-                  detail.activity_tags.map(t => ({ icon: getActivityIcon(t), label: t }))
-                    .filter(x => x.icon)
-                    .map(JSON.stringify)
-                )].map(JSON.parse)
-                return icons.length > 0 ? (
+              return (
+                <div ref={summaryRef} className={styles.summarySection}>
+
+                  {/* 7-day weather strip */}
                   <section>
-                    <h3 className={styles.sectionTitle}>Activities</h3>
-                    <div className={styles.bubbleRow}>
-                      {icons.map(({ icon, label }) => (
-                        <IconBubble key={label} icon={icon} label={label} />
-                      ))}
-                    </div>
+                    <h3 className={styles.sectionTitle}>7-Day Weather</h3>
+                    <WeatherWeek rows={weatherRows} isStale={detail.weather_stale} />
                   </section>
-                ) : null
-              })()}
 
-              {/* Landscape icon row */}
-              {detail.terrain_tags?.length > 0 && (() => {
-                const icons = [...new Set(
-                  detail.terrain_tags.map(t => ({ icon: getTerrainIcon(t), label: t, dotColor: getTerrainColor(t) }))
-                    .filter(x => x.icon)
-                    .map(JSON.stringify)
-                )].map(JSON.parse)
-                const dots = detail.terrain_tags
-                  .filter(t => !getTerrainIcon(t))
-                  .map(t => ({ label: t, dotColor: getTerrainColor(t) }))
-                return (icons.length > 0 || dots.length > 0) ? (
-                  <section>
-                    <h3 className={styles.sectionTitle}>Landscape</h3>
-                    <div className={styles.bubbleRow}>
-                      {icons.map(({ icon, label, dotColor }) => (
-                        <IconBubble key={label} icon={icon} label={label} dotColor={dotColor} />
-                      ))}
-                      {dots.map(({ label, dotColor }) => (
-                        <span
-                          key={label}
-                          title={label}
-                          className={styles.dotBubble}
-                          style={{ background: dotColor }}
-                          aria-label={label}
-                        />
-                      ))}
-                    </div>
-                  </section>
-                ) : null
-              })()}
+                  {/* Availability */}
+                  <AvailPill
+                    data={availData}
+                    loading={availLoading}
+                    start={filters.availStart}
+                    end={filters.availEnd}
+                    onClick={() => setShowAvailModal(true)}
+                  />
 
-              {/* Wildlife icon row */}
-              {detail.wildlife_tags?.length > 0 && (() => {
-                const seen = new Set()
-                const icons = detail.wildlife_tags
-                  .map(t => {
-                    const group = primaryWildlifeGroup([t])
-                    const key = `${group}:${t}`
-                    if (seen.has(key)) return null
-                    seen.add(key)
-                    return { icon: getWildlifeIcon(group), label: t }
-                  })
-                  .filter(Boolean)
-                  .filter(x => x.icon)
-                return icons.length > 0 ? (
-                  <section>
-                    <h3 className={styles.sectionTitle}>Wildlife</h3>
-                    <div className={styles.bubbleRow}>
-                      {icons.map(({ icon, label }) => (
-                        <IconBubble key={label} icon={icon} label={label} />
-                      ))}
-                    </div>
-                  </section>
-                ) : null
-              })()}
-
-              {/* Amenities */}
-              <section>
-                <h3 className={styles.sectionTitle}>Amenities</h3>
-                <div className={styles.amenityRow}>
-                  {AMENITY_LABELS.map(({ key, label }) =>
-                    detail[key] ? (
-                      <span key={key} className={styles.amenityChip}>{label}</span>
-                    ) : null
+                  {/* Activities */}
+                  {actIcons.length > 0 && (
+                    <section>
+                      <h3 className={styles.sectionTitle}>Activities</h3>
+                      <div className={styles.bubbleRow}>
+                        {actIcons.map(({ icon, label }) => (
+                          <IconBubble key={label} icon={icon} label={label} />
+                        ))}
+                      </div>
+                    </section>
                   )}
-                  {!AMENITY_LABELS.some(({ key }) => detail[key]) && (
-                    <span className={styles.empty}>None listed</span>
+
+                  {/* Landscape */}
+                  {(terIcons.length > 0 || terDots.length > 0) && (
+                    <section>
+                      <h3 className={styles.sectionTitle}>Landscape</h3>
+                      <div className={styles.bubbleRow}>
+                        {terIcons.map(({ icon, label, dotColor }) => (
+                          <IconBubble key={label} icon={icon} label={label} dotColor={dotColor} />
+                        ))}
+                        {terDots.map(({ label, dotColor }) => (
+                          <span key={label} title={label} className={styles.dotBubble} style={{ background: dotColor }} aria-label={label} />
+                        ))}
+                      </div>
+                    </section>
                   )}
+
+                  {/* Wildlife */}
+                  {wildIcons.length > 0 && (
+                    <section>
+                      <h3 className={styles.sectionTitle}>Wildlife</h3>
+                      <div className={styles.bubbleRow}>
+                        {wildIcons.map(({ icon, label }) => (
+                          <IconBubble key={label} icon={icon} label={label} />
+                        ))}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Amenities */}
+                  {AMENITY_LABELS.some(({ key }) => detail[key]) && (
+                    <section>
+                      <h3 className={styles.sectionTitle}>Amenities</h3>
+                      <div className={styles.amenityRow}>
+                        {AMENITY_LABELS.map(({ key, label }) =>
+                          detail[key] ? <span key={key} className={styles.amenityChip}>{label}</span> : null
+                        )}
+                      </div>
+                    </section>
+                  )}
+
+                  {/* Alerts */}
+                  <AlertsSummary alerts={alerts} />
+
+                  {/* Reserve + stay limit */}
+                  {(detail.reservation_url || detail.stay_limit) && (
+                    <div>
+                      {detail.stay_limit && <p className={styles.meta}>Stay limit: {detail.stay_limit}</p>}
+                      {detail.reservation_url && (
+                        <a href={detail.reservation_url} target="_blank" rel="noopener noreferrer" className={styles.reserveLink}>
+                          Reserve on Recreation.gov →
+                        </a>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Spacer pushes jump button to bottom of snap section */}
+                  <div className={styles.snapSpacer} />
+
+                  <button
+                    className={styles.jumpBtn}
+                    onClick={() => descRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                    type="button"
+                  >
+                    About this campground ↓
+                  </button>
                 </div>
-              </section>
-
-              {/* Reserve + stay limit */}
-              {(detail.reservation_url || detail.stay_limit) && (
-                <section>
-                  {detail.stay_limit && (
-                    <p className={styles.meta}>Stay limit: {detail.stay_limit}</p>
-                  )}
-                  {detail.reservation_url && (
-                    <a
-                      href={detail.reservation_url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={styles.reserveLink}
-                    >
-                      Reserve on Recreation.gov →
-                    </a>
-                  )}
-                </section>
-              )}
-
-              {/* Jump to description */}
-              <button
-                className={styles.jumpBtn}
-                onClick={() => descRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                type="button"
-              >
-                About this campground ↓
-              </button>
-            </div>
+              )
+            })()}
 
             {/* ══ DESCRIPTION SECTION ══════════════════════════════════════ */}
             <div ref={descRef} className={styles.detailSection}>
@@ -303,22 +321,14 @@ export function DetailPanel() {
                 ↑ Back to summary
               </button>
 
-              {detail.description && (
+              {detail.description ? (
                 <section>
                   <h3 className={styles.sectionTitle}>About</h3>
                   <p className={styles.description}>{detail.description}</p>
                 </section>
+              ) : (
+                <p className={styles.empty}>No description available.</p>
               )}
-
-              <section>
-                <h3 className={styles.sectionTitle}>7-Day Weather</h3>
-                <WeatherSection rows={weatherRows} isStale={detail.weather_stale} />
-              </section>
-
-              <section>
-                <h3 className={styles.sectionTitle}>Alerts</h3>
-                <AlertsSection alerts={alerts} />
-              </section>
             </div>
 
           </div>

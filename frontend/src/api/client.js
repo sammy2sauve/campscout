@@ -13,9 +13,14 @@ async function get(path, params = {}) {
   return res.json()
 }
 
+export async function fetchRegions() {
+  return get('/regions')
+}
+
 export async function fetchCampgrounds({
   bbox,
   state,
+  region,
   has_electricity,
   has_showers,
   has_toilets,
@@ -30,6 +35,7 @@ export async function fetchCampgrounds({
   return get('/campgrounds', {
     bbox,
     state,
+    region,
     has_electricity: has_electricity || undefined,
     has_showers: has_showers || undefined,
     has_toilets: has_toilets || undefined,
