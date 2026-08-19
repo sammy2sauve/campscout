@@ -1,222 +1,160 @@
-# CampScout
+# CampScout — Federal Campsite Search & Availability
 
-A full-stack data engineering project that ingests campsite availability, campground metadata, and weather forecasts from three federal government APIs, resolves them into a unified data model, and serves them through a map-first search dashboard.
+Finding an open federal campsite shouldn't require five browser tabs, three government websites, and a weather app. CampScout pulls availability, weather, and campground details into one map-first dashboard — updated automatically every day.
 
-**Live demo:** [campscout-delta.vercel.app](https://campscout-delta.vercel.app)
+**[→ Try the live demo](https://campscout-delta.vercel.app)** — no sign-up required
 
 ---
 
-## What it does
+[![CampScout map dashboard](docs/screenshots/map.png)](https://campscout-delta.vercel.app)
 
-Search and filter 4,000+ federal campgrounds across the US. Filter by amenities, wildlife, landscape type, and activities. Check real-time availability and 7-day weather for any campground — all sourced live from government APIs and refreshed automatically on a schedule.
+---
+
+## The Problem
+
+Recreation.gov tells you if a site is available. It doesn't tell you what wildlife lives there, whether there's shade, or what the weather looks like that weekend. NPS has the descriptions. NOAA has the weather. None of them talk to each other. Campers piece it all together manually every time.
+
+## What CampScout Does
+
+- **Live availability** — Recreation.gov data refreshed daily, per-campsite windows so you can see exactly which sites are open on your dates
+- **7-day weather** — NOAA forecasts pulled per campground, cached and served without hitting the API on every request
+- **Structured tags** — wildlife, landscape, and activity tags extracted from freeform NPS descriptions using keyword extraction, so you can actually filter by "bear country" or "waterfall"
+- **Automated pipeline** — GitHub Actions runs the full ETL on a schedule; the DB always reflects current availability without any manual intervention
+
+---
+
+## How It Works — From Region to Reservation
+
+### 1. Pick a Region
+
+The home page shows all six US regions with live campground counts pulled from the API. Selecting one snaps the map to that region's bounding box and loads its campgrounds.
+
+[![Home page with region cards](docs/screenshots/home.png)](https://campscout-delta.vercel.app)
+
+### 2. Explore the Map
+
+Campgrounds appear as clustered markers. Zooming in breaks clusters into individual sites — each marker shows a wildlife badge and terrain ring at a glance. The map is constrained to the selected region with a state-shape overlay that grays out everything outside it.
+
+[![Map view with markers and region overlay](docs/screenshots/map.png)](https://campscout-delta.vercel.app)
+
+### 3. Filter Campgrounds
+
+The filter panel narrows by amenities (electricity, showers, drinking water, pet-friendly, ADA), wildlife tags, landscape type, and activities. Filters combine — electric sites near a waterfall that allow dogs is a single query, not three.
+
+[![Filter panel](docs/screenshots/filters.png)](https://campscout-delta.vercel.app)
+
+### 4. View Campground Details
+
+Clicking a marker opens the detail panel: photo gallery, 7-day weather strip, activities, landscape, wildlife emblems, amenity chips, and NPS alerts. First-come-first-serve campgrounds show a walk-in badge instead of a date picker — no misleading "no availability" messaging for sites that don't use the reservation system.
+
+[![Detail panel with weather and tags](docs/screenshots/detail.png)](https://campscout-delta.vercel.app)
+
+### 5. Check Availability
+
+Set arrival and departure dates in the filter panel. Available site counts appear on each campground marker. Click through to the availability modal for a per-site breakdown — site name, loop, type, and every available date in the window.
+
+[![Availability modal](docs/screenshots/availability.png)](https://campscout-delta.vercel.app)
+
+---
+
+## Stack
+
+| Layer | Tech | Why |
+|---|---|---|
+| Orchestration | Prefect 2 | Per-source retries and failure isolation across 3 differently-paced APIs — not a cron script |
+| Database | PostgreSQL + PostGIS (Neon) | Geospatial joins for NOAA station lookup are core, not an afterthought |
+| Backend | FastAPI + SQLAlchemy + GeoAlchemy2 | Async-friendly for polling multiple slow government APIs |
+| Frontend | React + react-leaflet | Map-first dashboard; OSM tiles avoid any Mapbox billing dependency |
+| Scheduling | GitHub Actions | 2,000 free minutes/month — enough for weekly metadata + daily availability syncs |
+| Tag extraction | Rule-based regex/keyword | Deterministic, no LLM API dependency in a scheduled batch pipeline |
+| Deployment | Render (API) + Vercel (frontend) | Both free tiers, auto-deploy on push |
 
 ---
 
 ## Architecture
 
 ```
-┌──────────────────────────────────────────────────────────────────┐
-│                         Data Sources                             │
-│   Recreation.gov (availability) · NPS (metadata/alerts)         │
-│   NOAA api.weather.gov (forecasts)                               │
-└──────────┬───────────────────────────┬───────────────────────────┘
-           │                           │
-           ▼                           ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       Ingestion Layer                            │
-│   src/ingestion/recreation_gov.py  per-facility polling,         │
-│                                    rate-limit backoff            │
-│   src/ingestion/nps.py             metadata + freeform alerts    │
-│   src/ingestion/noaa.py            Points API → grid → forecast  │
-│                                                                  │
-│   Raw responses written to staging tables before transform.      │
-│   Re-processing never requires re-hitting rate-limited APIs.     │
-│   One source failing does not block the others.                  │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                       Transform Layer                            │
-│   src/transform/run.py                                           │
-│                                                                  │
-│   · Entity resolution: NPS ↔ Recreation.gov facility match       │
-│   · PostGIS ST_Distance: campground → nearest NOAA grid point    │
-│   · Keyword extraction: wildlife / landscape / activity tags     │
-│     from freeform description + alert text                       │
-│     (src/transform/keywords.json — rule-based, no LLM dep)      │
-│   · Amenity bit-packing: 6 booleans → 1 INTEGER                  │
-│   · Upsert availability: ON CONFLICT DO UPDATE, past dates       │
-│     pruned after each run (rolling 90-day window, never bloats)  │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────────────┐
-│              Storage — PostgreSQL + PostGIS (Neon)               │
-│                                                                  │
-│   regions                6 rows (SE · NE · Great Lakes ·         │
-│                           Plains · Mountain · Pacific West)      │
-│   campgrounds            ~4,000  (amenity_flags, region_id FK,   │
-│                           NOAA grid cache)                       │
-│   campsites              ~40,000 (reserve_type, amenities)       │
-│   availability_snapshots rolling 90-day upsert window            │
-│                          today → today+90, ~162K rows for SE     │
-│   weather_forecasts      upsert per (campground, date, tod)      │
-│   campground_alerts      NPS freeform alerts                     │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                   API Layer — FastAPI (Render)                   │
-│                                                                  │
-│   GET /api/regions                   6 regions + counts          │
-│   GET /api/campgrounds               filter by region, amenity,  │
-│                                      tags, bbox                  │
-│   GET /api/campgrounds/{id}          full detail                 │
-│   GET /api/campgrounds/{id}/availability  per-site windows,      │
-│                                           fcfs_only flag         │
-│   GET /api/campgrounds/{id}/weather  7-day NOAA forecast         │
-│   GET /api/campgrounds/{id}/alerts   NPS alerts                  │
-│                                                                  │
-│   TTL caching (cachetools) · Cache-Control headers               │
-│   Pydantic response schemas kept separate from ORM models        │
-└──────────────────────────┬───────────────────────────────────────┘
-                           │
-                           ▼
-┌──────────────────────────────────────────────────────────────────┐
-│                  Frontend — React + Vite (Vercel)                │
-│                                                                  │
-│   react-leaflet map · marker clustering · OSM tiles              │
-│   Region picker → US state GeoJSON overlay (amber glow border)   │
-│   Filter panel: amenities, wildlife, landscape, activities       │
-│   Detail panel: photo gallery, weather strip, availability,      │
-│                 FCFS walk-in badge, SVG tag emblems              │
-│   Home page: hero, photo gallery, about, region cards            │
-└──────────────────────────────────────────────────────────────────┘
-
-┌──────────────────────────────────────────────────────────────────┐
-│              Orchestration — GitHub Actions (free tier)          │
-│                                                                  │
-│   Weekly  Sun 03:00 UTC  national metadata sync, all 6 regions   │
-│   Daily   05:00 UTC      SE availability sync, rolling 90 days   │
-│   Prefect flows run in local mode inside GH Actions runners      │
-└──────────────────────────────────────────────────────────────────┘
+Recreation.gov + NPS  →  national metadata sync  (GitHub Actions, weekly)
+Recreation.gov        →  availability sync        (GitHub Actions, daily)
+NOAA                  →  weather forecasts        (on-demand, DB-cached 6h)
+        ↓
+Ingestion layer (src/ingestion/)
+  recreation_gov.py   per-facility polling, exponential backoff on rate limits
+  nps.py              campground metadata + freeform alert text
+  noaa.py             Points API → grid → 7-day forecast endpoint
+        ↓
+  Raw API responses written to staging tables before transform.
+  One source failing does not block the others.
+        ↓
+Transform layer (src/transform/run.py)
+  · NPS ↔ Recreation.gov entity resolution
+  · PostGIS ST_Distance: campground → nearest NOAA grid point
+  · Keyword extraction → wildlife / landscape / activity tags
+  · Amenity bit-packing: 6 booleans → 1 INTEGER (amenity_flags)
+  · Upsert availability: ON CONFLICT DO UPDATE, past dates pruned
+        ↓
+PostgreSQL + PostGIS (Neon)
+  regions              6 rows
+  campgrounds          ~4,000  (amenity_flags, region_id, NOAA grid cache)
+  campsites            ~40,000 (reserve_type)
+  availability_snapshots  rolling 90-day upsert window — never bloats
+  weather_forecasts    upsert per (campground, date, time-of-day)
+  campground_alerts    NPS freeform alerts
+        ↓
+FastAPI (Render)
+  GET /api/regions
+  GET /api/campgrounds        (filter: region, amenities, tags, bbox, dates)
+  GET /api/campgrounds/{id}
+  GET /api/campgrounds/{id}/availability
+  GET /api/campgrounds/{id}/weather
+  GET /api/campgrounds/{id}/alerts
+        ↓
+React + react-leaflet (Vercel)
 ```
 
 ---
 
-## Tech stack
+## Key Technical Decisions
 
-| Layer | Choice | Why |
-|---|---|---|
-| Orchestration | Prefect 2 | Per-source retries, failure isolation, dependency graphs across 3 differently-paced sources |
-| Database | PostgreSQL + PostGIS | Geospatial joins (nearest NOAA station) are core to the problem, not an afterthought |
-| Backend | FastAPI + SQLAlchemy + GeoAlchemy2 | Async-friendly for polling multiple slow government APIs |
-| Frontend | React + react-leaflet | Map-first dashboard; OSM tiles avoid any Mapbox billing dependency |
-| Scheduling | GitHub Actions | 2,000 free min/month — enough for weekly metadata + daily availability |
-| Tag extraction | Rule-based regex/keyword | Deterministic, no LLM API dependency in a scheduled batch pipeline |
+**Why a rolling upsert window for availability instead of append-only?** Recreation.gov availability changes constantly — a site reserved today was available yesterday. An append-only table would require deduplication on every read and grow unbounded. Instead, each sync does `INSERT ... ON CONFLICT (campsite_id, date) DO UPDATE SET status = excluded.status`. After each run, `DELETE FROM availability_snapshots WHERE date < CURRENT_DATE` prunes past rows. The table stays at exactly `num_campsites × 90` rows regardless of how long the pipeline has been running.
+
+**Why bit-pack amenity flags into a single INTEGER?** Six boolean columns mean six separate index lookups for a filtered query. A single `amenity_flags INTEGER` with bitwise AND — `amenity_flags & 8 != 0` for electricity — is one index scan. It also makes adding new amenity types a schema-free change (a new bit position, not a new column).
+
+**Why rule-based tag extraction instead of an LLM?** The extraction runs inside a scheduled pipeline on a cron schedule. An LLM API call per campground description would add latency, cost, and an external failure mode to every pipeline run. The keyword list lives in `src/transform/keywords.json` — adding a new tag category is a data change, not a code change, and the output is deterministic and testable.
 
 ---
 
-## Data engineering highlights
-
-**Three independently-failing sources.** Recreation.gov, NPS, and NOAA each have different rate limits, response formats, and failure modes. Each ingestion module writes raw API responses to staging tables before transforming them — so reprocessing after a bug fix never requires re-hitting a rate-limited API. One source going down does not block the others.
-
-**Rolling availability window.** Availability snapshots use an upsert model (`ON CONFLICT (campsite_id, date) DO UPDATE`) rather than append-only inserts. Past dates are pruned after each run. The table stays at exactly `num_campsites × 90` rows — it never grows regardless of how long the pipeline has been running.
-
-**Amenity bit-packing.** Six boolean amenity fields are stored as a single `INTEGER` using bit flags (`TOILETS=1, SHOWERS=2, DRINKING_WATER=4, ELECTRICITY=8, PETS=16, ADA=32`). Filter queries use bitwise AND: `amenity_flags & 8 != 0` instead of six separate indexed boolean columns.
-
-**Graceful weather degradation.** NOAA grid endpoints go offline regularly. The pipeline marks affected campgrounds `weather_stale=true` and continues rather than failing the run. The frontend shows a staleness warning instead of a broken state.
-
-**Freeform alert parsing.** NPS alert text is unstructured prose, not enums. The transform layer extracts wildlife, landscape, and activity tags using a keyword list in `src/transform/keywords.json` — an editable data file, not inline code — so adding new tag categories requires no code changes.
-
-**First Come First Serve detection.** Recreation.gov's `CAMPSITE_RESERVE_TYPE` field is normalized to a `reserve_type` column (`site_specific`, `first_come`, `lottery`, `pass`). When all campsites at a campground are `first_come`, the availability endpoint returns `fcfs_only: true` and the frontend swaps the date picker for a walk-in badge rather than showing misleading "no availability" messaging.
-
----
-
-## Running locally
-
-### Prerequisites
-- Python 3.11+
-- Node 18+
-- PostgreSQL with PostGIS, or a [Neon](https://neon.tech) free account
-
-### Backend
+## Local Setup
 
 ```bash
+# 1. Clone and configure
 cp .env.example .env
-# fill in: RECREATION_GOV_API_KEY, NPS_API_KEY, DATABASE_URL, NOAA_USER_AGENT
+# Fill in: DATABASE_URL, RECREATION_GOV_API_KEY, NPS_API_KEY, NOAA_USER_AGENT
 
-pip install -r requirements.txt
-
-# apply migrations in order
-psql $DATABASE_URL -f src/storage/migrations/001_add_photo_urls.sql
-psql $DATABASE_URL -f src/storage/migrations/002_add_campground_summary_mv.sql
-psql $DATABASE_URL -f src/storage/migrations/003_add_activity_tags.sql
+# 2. Apply migrations
 psql $DATABASE_URL -f src/storage/migrations/004_add_regions.sql
 psql $DATABASE_URL -f src/storage/migrations/005_amenity_flags.sql
 psql $DATABASE_URL -f src/storage/migrations/006_availability_dedup.sql
 psql $DATABASE_URL -f src/storage/migrations/007_add_reserve_type.sql
 
-# run the pipeline (Southeast region)
+# 3. Run the pipeline (Southeast region)
+pip install -r requirements.txt
 python -m src.flows.pipeline
 
-# start the API
+# 4. Start the API
 python -m uvicorn src.api.main:app --reload
-```
+# → http://localhost:8000/api/regions
 
-### Frontend
-
-```bash
-cd frontend
-npm install
-npm run dev    # Vite proxies /api → localhost:8000
-```
-
-Open [http://localhost:5173](http://localhost:5173).
-
----
-
-## Project structure
-
-```
-campscout/
-├── src/
-│   ├── ingestion/          # recreation_gov.py · nps.py · noaa.py
-│   ├── transform/
-│   │   ├── run.py          # entity resolution, tag extraction, upserts
-│   │   └── keywords.json   # wildlife / landscape / activity keyword lists
-│   ├── storage/
-│   │   ├── models.py       # SQLAlchemy ORM models
-│   │   └── migrations/     # 001–007 SQL migration files
-│   ├── api/
-│   │   ├── main.py         # FastAPI app + router registration
-│   │   ├── routes/         # campgrounds, availability, weather, alerts, regions
-│   │   └── schemas.py      # Pydantic response schemas
-│   ├── models/
-│   │   └── amenity_flags.py  # bit-flag helpers
-│   └── flows/
-│       └── pipeline.py     # Prefect flow + task definitions
-├── frontend/
-│   └── src/
-│       ├── api/client.js   # all fetch calls, VITE_API_BASE_URL aware
-│       ├── components/     # MapView · DetailPanel · FilterPanel · HomePage · …
-│       ├── hooks/          # useCampgrounds · useAvailability · useWeather · …
-│       └── emblems/        # SVG icon sets for wildlife, landscape, activity tags
-├── .github/workflows/      # pipeline-metadata.yml · pipeline-availability.yml
-├── render.yaml             # Render deploy config (FastAPI backend)
-├── frontend/vercel.json    # Vercel SPA rewrite rule
-├── DEPLOY.md               # Step-by-step deployment guide
-└── Roadmap.md              # Build phases and current status
+# 5. Start the frontend
+cd frontend && npm install && npm run dev
+# → http://localhost:5173
 ```
 
 ---
 
-## Environment variables
+## What I'd Do Next
 
-| Variable | Where | Description |
-|---|---|---|
-| `DATABASE_URL` | Backend + GH Actions | PostgreSQL connection string (PostGIS required) |
-| `RECREATION_GOV_API_KEY` | Backend + GH Actions | [ridb.recreation.gov](https://ridb.recreation.gov/profile) |
-| `NPS_API_KEY` | Backend + GH Actions | [nps.gov/subjects/developer](https://www.nps.gov/subjects/developer/get-started.htm) |
-| `NOAA_USER_AGENT` | Backend + GH Actions | e.g. `campscout (your@email.com)` — no key needed |
-| `VITE_API_BASE_URL` | Vercel only | Render API URL, e.g. `https://campscout-api.onrender.com` |
+- **Saved searches and alerts** — users set a region + date window and get notified when a site opens up; the availability table already has the data, it just needs a notification layer on top
+- **LLM-assisted tag extraction** — the rule-based extractor misses nuance in longer descriptions; a lightweight model fine-tuned on campground text would increase tag recall without adding latency to the pipeline (batch offline, not in-request)
+- **More regions for availability** — the pipeline is already region-aware; daily availability sync is currently Southeast-only to stay within the Recreation.gov rate limit on a single machine, but horizontal scaling across regions is straightforward
+- **Mobile-first layout** — the map dashboard works on mobile but wasn't designed for it; a bottom-sheet detail panel and touch-optimized marker clustering would make it usable for trip planning on the road
