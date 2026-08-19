@@ -110,6 +110,7 @@ class Campsite(Base):
     max_occupants = Column(Integer)
     max_vehicle_length_ft = Column(Integer)
     is_reservable = Column(Boolean)
+    reserve_type = Column(String)     # "site_specific", "first_come", "lottery", "pass"
     ada_accessible = Column(Boolean)
     has_electricity = Column(Boolean)
     has_water_hookup = Column(Boolean)

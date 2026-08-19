@@ -145,6 +145,7 @@ class CampsiteWindow(BaseModel):
     name: str | None = None
     loop: str | None = None
     site_type: str | None = None
+    reserve_type: str | None = None   # "site_specific", "first_come", "lottery", "pass"
     available_dates: list[date] = []
     total_dates: int = 0
 
@@ -152,6 +153,7 @@ class CampsiteWindow(BaseModel):
 class AvailabilityResponse(BaseModel):
     sites: list[CampsiteWindow]
     available_site_count: int
+    fcfs_only: bool = False   # True when all campsites are first-come-first-serve
     start: date
     end: date
 

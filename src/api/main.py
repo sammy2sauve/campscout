@@ -40,10 +40,10 @@ def health():
     return {"status": "ok"}
 
 
-app.include_router(regions.router, tags=["regions"])
+app.include_router(regions.router, prefix="/api", tags=["regions"])
 
-# All campground-scoped routes share the /campgrounds prefix.
-app.include_router(campgrounds.router, prefix="/campgrounds", tags=["campgrounds"])
-app.include_router(availability.router, prefix="/campgrounds", tags=["availability"])
-app.include_router(weather.router, prefix="/campgrounds", tags=["weather"])
-app.include_router(alerts.router, prefix="/campgrounds", tags=["alerts"])
+# All campground-scoped routes share the /api/campgrounds prefix.
+app.include_router(campgrounds.router, prefix="/api/campgrounds", tags=["campgrounds"])
+app.include_router(availability.router, prefix="/api/campgrounds", tags=["availability"])
+app.include_router(weather.router, prefix="/api/campgrounds", tags=["weather"])
+app.include_router(alerts.router, prefix="/api/campgrounds", tags=["alerts"])

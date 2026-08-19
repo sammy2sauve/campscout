@@ -117,6 +117,20 @@ function IconBubble({ icon, label, dotColor }) {
 
 /** Clickable availability pill that opens the modal */
 function AvailPill({ data, loading, start, end, onClick }) {
+  // FCFS campground — no reservation system, show walk-in badge instead
+  if (data?.fcfs_only) {
+    return (
+      <div className={styles.fcfsBadge}>
+        <span aria-hidden="true">🥾</span>
+        <span>
+          <strong>First Come, First Serve</strong>
+          <br />
+          <small>Walk-in only — no reservations through Recreation.gov</small>
+        </span>
+      </div>
+    )
+  }
+
   if (!start || !end) {
     return (
       <div className={styles.availPillEmpty}>

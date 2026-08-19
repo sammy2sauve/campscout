@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: campscout-api
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn src.api.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: DATABASE_URL
+        sync: false          # set manually in Render dashboard
+      - key: RECREATION_GOV_API_KEY
+        sync: false
+      - key: NPS_API_KEY
+        sync: false
+      - key: NOAA_USER_AGENT
+        sync: false

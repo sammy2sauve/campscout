@@ -264,6 +264,15 @@ def transform_campsites(db: Session) -> None:
             cs.site_type = site.get("CampsiteType")
             cs.type_of_use = site.get("TypeOfUse")
             cs.is_reservable = site.get("CampsiteReservable", False)
+
+            raw_rt = (site.get("CampsiteReserveType") or "").strip()
+            rt_map = {
+                "Site-Specific":        "site_specific",
+                "First Come First Serve": "first_come",
+                "Lottery":              "lottery",
+                "Pass":                 "pass",
+            }
+            cs.reserve_type = rt_map.get(raw_rt) or ("site_specific" if cs.is_reservable else "first_come")
             cs.ada_accessible = site.get("CampsiteAccessible", False)
             cs.max_vehicle_length_ft = max_vehicle_length(site.get("PERMITTEDEQUIPMENT", []))
 

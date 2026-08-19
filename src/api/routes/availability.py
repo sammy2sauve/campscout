@@ -36,7 +36,7 @@ def get_availability(
 
     campsites = db.query(Campsite).filter(Campsite.campground_id == campground_id).all()
     if not campsites:
-        return AvailabilityResponse(sites=[], available_site_count=0, start=start, end=end)
+        return AvailabilityResponse(sites=[], available_site_count=0, fcfs_only=False, start=start, end=end)
 
     campsite_ids = [c.id for c in campsites]
     campsite_map = {c.id: c for c in campsites}
@@ -83,6 +83,7 @@ def get_availability(
                 name=campsite.name,
                 loop=campsite.loop,
                 site_type=campsite.site_type,
+                reserve_type=campsite.reserve_type,
                 available_dates=avail_dates,
                 total_dates=len(snapshots),
             )
@@ -92,10 +93,12 @@ def get_availability(
     windows.sort(key=lambda w: (-len(w.available_dates), w.name or ""))
 
     available_site_count = sum(1 for w in windows if w.available_dates)
+    fcfs_only = bool(campsites) and all(c.reserve_type == "first_come" for c in campsites)
 
     return AvailabilityResponse(
         sites=windows,
         available_site_count=available_site_count,
+        fcfs_only=fcfs_only,
         start=start,
         end=end,
     )

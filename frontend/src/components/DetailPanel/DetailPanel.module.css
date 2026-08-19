@@ -191,6 +191,25 @@
 
 /* ── Availability pill ──────────────────────────────────────────────────── */
 
+.fcfsBadge {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13px;
+  color: var(--color-text);
+  background: color-mix(in srgb, #6b8e5e 12%, var(--color-bg) 88%);
+  border: 1.5px solid #6b8e5e;
+  border-radius: 10px;
+  padding: 10px 14px;
+  line-height: 1.5;
+}
+
+.fcfsBadge > span:first-child {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
 .availPillEmpty {
   display: flex;
   align-items: center;
