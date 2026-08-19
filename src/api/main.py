@@ -27,8 +27,10 @@ app = FastAPI(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite dev server
-        "http://localhost:3000",  # CRA / fallback
+        "http://localhost:5173",
+        "http://localhost:3000",
+        "https://campscout-delta.vercel.app",
+        "https://*.vercel.app",
     ],
     allow_methods=["GET"],
     allow_headers=["*"],
