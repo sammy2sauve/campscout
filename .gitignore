@@ -26,3 +26,11 @@ data/processed/
 .DS_Store
 .vscode/
 .idea/
+
+# Dev tooling (Claude Code, TypeUI)
+.agents/
+.claude/
+skills-lock.json
+
+# Windows artifacts
+nul
