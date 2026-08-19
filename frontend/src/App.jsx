@@ -4,7 +4,7 @@ import { MapView } from './components/MapView/MapView.jsx'
 import { SearchBar } from './components/SearchBar/SearchBar.jsx'
 import { FilterPanel } from './components/FilterPanel/FilterPanel.jsx'
 import { DetailPanel } from './components/DetailPanel/DetailPanel.jsx'
-import { RegionPicker } from './components/RegionPicker/RegionPicker.jsx'
+import { HomePage } from './components/HomePage/HomePage.jsx'
 import { useCampgrounds } from './hooks/useCampgrounds.js'
 import { fetchRegions } from './api/client.js'
 import styles from './App.module.css'
@@ -120,7 +120,7 @@ function AppInner() {
   const regionData = allRegions.find((r) => r.id === selectedRegion) ?? null
 
   if (!selectedRegion) {
-    return <RegionPicker />
+    return <HomePage />
   }
 
   return <Dashboard regionData={regionData} allRegions={allRegions} />
