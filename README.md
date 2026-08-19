@@ -2,7 +2,7 @@
 
 A full-stack data engineering project that ingests campsite availability, campground metadata, and weather forecasts from three federal government APIs, resolves them into a unified data model, and serves them through a map-first search dashboard.
 
-**Live demo:** [campscout.vercel.app](https://campscout.vercel.app)
+**Live demo:** [campscout-delta.vercel.app](https://campscout-delta.vercel.app)
 
 ---
 

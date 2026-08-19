@@ -118,7 +118,7 @@ DB (Neon, free 0.5 GB — ~160 MB estimated):
   weather_forecasts    (upsert, no accumulation)
 
 API (Render free tier):  https://campscout-api.onrender.com
-Frontend (Vercel free):  https://campscout.vercel.app
+Frontend (Vercel free):  https://campscout-delta.vercel.app
 Pipeline (GitHub Actions, 2,000 free min/month):
   - pipeline-metadata.yml  (Sunday 03:00 UTC)
   - pipeline-availability.yml (daily 05:00 UTC)
