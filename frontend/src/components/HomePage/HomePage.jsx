@@ -65,7 +65,7 @@ export function HomePage() {
 
     // Grab SE campgrounds for the gallery — grows automatically as data fills in
     fetchCampgrounds({ region: 'southeast', limit: 20 })
-      .then((data) => setFeatured(data.campgrounds ?? []))
+      .then((data) => setFeatured(data.items ?? []))
       .catch(() => {})
   }, [])
 

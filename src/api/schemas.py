@@ -76,6 +76,7 @@ class CampgroundSummary(BaseModel):
     terrain_tags: list[str] | None = None
     activity_tags: list[str] | None = None
     weather_stale: bool | None = None
+    photo_urls: list[str] | None = None
 
     @field_validator("location", mode="before")
     @classmethod
