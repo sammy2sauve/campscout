@@ -10,6 +10,14 @@
   height: 100%;
 }
 
+/* Glow on region-state borders — applied via className in stateStyle() */
+:global(.region-state-glow) {
+  filter:
+    drop-shadow(0 0 4px rgba(200, 168, 112, 1))
+    drop-shadow(0 0 10px rgba(200, 168, 112, 0.7))
+    drop-shadow(0 0 20px rgba(200, 168, 112, 0.35));
+}
+
 /* Cluster bubble — burnt orange/amber palette */
 .cluster {
   width: 36px;

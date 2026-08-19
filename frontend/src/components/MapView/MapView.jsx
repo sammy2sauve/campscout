@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import L from 'leaflet'
 import {
   MapContainer, TileLayer, Marker, Tooltip,
-  LayersControl, Polygon, useMapEvents, useMap,
+  LayersControl, GeoJSON, useMapEvents, useMap,
 } from 'react-leaflet'
 import MarkerClusterGroup from 'react-leaflet-cluster'
 import { useApp } from '../../context/AppContext.jsx'
@@ -95,44 +95,64 @@ function FeatureLayer({ minZoom = 7 }) {
   ))
 }
 
-// ── Region grey-mask overlay ───────────────────────────────────────────────
-// Uses a polygon-with-hole: outer ring covers the whole world,
-// inner hole shows only the selected region's bbox unmasked.
+// ── State name → 2-letter abbreviation ────────────────────────────────────
 
-function RegionMask({ regionData }) {
-  if (!regionData) return null
+const STATE_ABBR = {
+  'Alabama': 'AL', 'Alaska': 'AK', 'Arizona': 'AZ', 'Arkansas': 'AR',
+  'California': 'CA', 'Colorado': 'CO', 'Connecticut': 'CT', 'Delaware': 'DE',
+  'Florida': 'FL', 'Georgia': 'GA', 'Hawaii': 'HI', 'Idaho': 'ID',
+  'Illinois': 'IL', 'Indiana': 'IN', 'Iowa': 'IA', 'Kansas': 'KS',
+  'Kentucky': 'KY', 'Louisiana': 'LA', 'Maine': 'ME', 'Maryland': 'MD',
+  'Massachusetts': 'MA', 'Michigan': 'MI', 'Minnesota': 'MN', 'Mississippi': 'MS',
+  'Missouri': 'MO', 'Montana': 'MT', 'Nebraska': 'NE', 'Nevada': 'NV',
+  'New Hampshire': 'NH', 'New Jersey': 'NJ', 'New Mexico': 'NM', 'New York': 'NY',
+  'North Carolina': 'NC', 'North Dakota': 'ND', 'Ohio': 'OH', 'Oklahoma': 'OK',
+  'Oregon': 'OR', 'Pennsylvania': 'PA', 'Rhode Island': 'RI', 'South Carolina': 'SC',
+  'South Dakota': 'SD', 'Tennessee': 'TN', 'Texas': 'TX', 'Utah': 'UT',
+  'Vermont': 'VT', 'Virginia': 'VA', 'Washington': 'WA', 'West Virginia': 'WV',
+  'Wisconsin': 'WI', 'Wyoming': 'WY', 'District of Columbia': 'DC',
+  'Puerto Rico': 'PR',
+}
 
-  const { bbox } = regionData
-  if (!bbox) return null
+// ── State-shape overlay: grey mask + region glow ──────────────────────────
+// Fetches us-states.geojson once; paints non-region states dark grey
+// and traces region-state borders with an amber glow.
 
-  const { min_lat, min_lon, max_lat, max_lon } = bbox
+function StateOverlay({ regionData }) {
+  const [geojson, setGeojson] = useState(null)
 
-  // Outer ring: entire world (clockwise)
-  const outer = [
-    [-90, -180], [-90, 180], [90, 180], [90, -180], [-90, -180],
-  ]
+  useEffect(() => {
+    fetch('/us-states.geojson')
+      .then((r) => r.json())
+      .then(setGeojson)
+      .catch(() => {})
+  }, [])
 
-  // Inner hole: region bbox (counter-clockwise — creates the "window")
-  const hole = [
-    [min_lat, min_lon],
-    [max_lat, min_lon],
-    [max_lat, max_lon],
-    [min_lat, max_lon],
-    [min_lat, min_lon],
-  ]
+  if (!geojson || !regionData) return null
 
-  return (
-    <Polygon
-      positions={[outer, hole]}
-      pathOptions={{
-        color: 'none',
-        fillColor: '#1a1a1a',
-        fillOpacity: 0.6,
-        stroke: false,
+  const regionStates = new Set(regionData.states)
+
+  function stateStyle(feature) {
+    const abbr = STATE_ABBR[feature.properties.NAME]
+    if (regionStates.has(abbr)) {
+      return {
+        fillOpacity: 0,
+        color: '#c8a870',
+        weight: 2,
+        opacity: 0.9,
+        className: 'region-state-glow',
         interactive: false,
-      }}
-    />
-  )
+      }
+    }
+    return {
+      fillColor: '#0e0e0e',
+      fillOpacity: 0.68,
+      stroke: false,
+      interactive: false,
+    }
+  }
+
+  return <GeoJSON key={regionData.id} data={geojson} style={stateStyle} />
 }
 
 // ── Region bounds fitter ───────────────────────────────────────────────────
@@ -237,8 +257,8 @@ export function MapView({ campgrounds, dataAsOf, onBboxChange, regionData }) {
         <SearchCenterWatcher />
         <RegionBoundsFitter regionData={regionData} />
 
-        {/* Grey mask over areas outside the selected region */}
-        <RegionMask regionData={regionData} />
+        {/* Grey mask (non-region states) + amber glow (region borders) */}
+        <StateOverlay regionData={regionData} />
 
         {/* National forests + parks feature markers */}
         <FeatureLayer minZoom={6} />
