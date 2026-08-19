@@ -1,40 +1,30 @@
 name: Weekly National Metadata Sync
 
-# Runs every Sunday at 3 AM UTC.
-# Ingests campground metadata (names, locations, amenities, tags, photos)
-# for all 6 regions from Recreation.gov and NPS.
-# Availability is NOT synced here — the daily workflow handles that.
-
 on:
   schedule:
-    - cron: '0 3 * * 0'   # Sunday 03:00 UTC
-  workflow_dispatch:        # allow manual trigger from GitHub UI
+    - cron: '0 3 * * 0'
+  workflow_dispatch:
 
 jobs:
   run-pipeline:
-    name: National metadata sync
     runs-on: ubuntu-latest
-    timeout-minutes: 360    # Recreation.gov rate limits mean this can take a few hours
+    timeout-minutes: 360
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
+          cache: pip
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - run: pip install -r requirements.txt
 
       - name: Run national metadata pipeline
-        env:
-          DATABASE_URL:            ${{ secrets.DATABASE_URL }}
-          RECREATION_GOV_API_KEY:  ${{ secrets.RECREATION_GOV_API_KEY }}
-          NPS_API_KEY:             ${{ secrets.NPS_API_KEY }}
-          NOAA_USER_AGENT:         ${{ secrets.NOAA_USER_AGENT }}
-          # Run Prefect in local mode — no Prefect Cloud server needed
-          PREFECT_API_URL:         ''
         run: python -m src.flows.pipeline --national
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          RECREATION_GOV_API_KEY: ${{ secrets.RECREATION_GOV_API_KEY }}
+          NPS_API_KEY: ${{ secrets.NPS_API_KEY }}
+          NOAA_USER_AGENT: ${{ secrets.NOAA_USER_AGENT }}
+          PREFECT_API_URL: ""
