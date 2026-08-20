@@ -6,6 +6,10 @@ Finding an open federal campsite shouldn't require five browser tabs, three gove
 
 > **Note:** The API is hosted on Render's free tier, which spins down after inactivity. The first request after a period of dormancy may take 30–60 seconds while the server cold-starts. Subsequent requests are fast.
 
+**Current data:** 3,961 campgrounds · 64,000+ individual campsites · 6 US regions · live daily availability for the Southeast
+
+**Best way to explore:** Open the **Southeast** region — it has the most complete data (live availability, 7-day weather, amenity and tag extraction all populated). Click any campground in Georgia, the Carolinas, or Tennessee to see the full experience: photo gallery, weather strip, availability windows, and wildlife/landscape/activity tags.
+
 ---
 
 [![CampScout map dashboard](docs/screenshots/map.png)](https://campscout-delta.vercel.app)
@@ -97,8 +101,8 @@ Transform layer (src/transform/run.py)
         ↓
 PostgreSQL + PostGIS (Neon)
   regions              6 rows
-  campgrounds          ~4,000  (amenity_flags, region_id, NOAA grid cache)
-  campsites            ~40,000 (reserve_type)
+  campgrounds          3,961   (amenity_flags, region_id, NOAA grid cache)
+  campsites            64,000+ (reserve_type, site_type, amenity rollup)
   availability_snapshots  rolling 90-day upsert window — never bloats
   weather_forecasts    upsert per (campground, date, time-of-day)
   campground_alerts    NPS freeform alerts

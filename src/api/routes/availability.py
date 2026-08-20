@@ -98,11 +98,15 @@ def get_availability(
 
     available_site_count = sum(1 for w in windows if w.available_dates)
     fcfs_only = bool(campsites) and all(c.reserve_type == "first_come" for c in campsites)
+    walk_in_only = bool(campsites) and all(
+        "walk" in (c.site_type or "").lower() for c in campsites
+    )
 
     return AvailabilityResponse(
         sites=windows,
         available_site_count=available_site_count,
         fcfs_only=fcfs_only,
+        walk_in_only=walk_in_only,
         start=start,
         end=end,
     )

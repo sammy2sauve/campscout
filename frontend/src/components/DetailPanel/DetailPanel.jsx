@@ -145,6 +145,20 @@ function AvailPill({ data, loading, start, end, onClick }) {
     )
   }
 
+  // Walk-in / primitive — all campsites require hiking in, no vehicle access to site
+  if (data?.walk_in_only) {
+    return (
+      <div className={styles.fcfsBadge}>
+        <span aria-hidden="true">🥾</span>
+        <span>
+          <strong>Walk-in / Primitive Site</strong>
+          <br />
+          <small>No vehicle access to campsite — hike in and claim your spot. No reservation needed, call ahead to confirm availability.</small>
+        </span>
+      </div>
+    )
+  }
+
   // FCFS campground — campsites exist but are first-come-first-serve
   if (data?.fcfs_only) {
     return (
