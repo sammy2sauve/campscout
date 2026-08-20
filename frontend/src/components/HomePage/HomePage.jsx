@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchRegions, fetchCampgrounds } from '../../api/client.js'
+import { fetchCampgrounds } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
 import styles from './HomePage.module.css'
 
@@ -53,21 +53,31 @@ function Gallery({ campgrounds }) {
 
 // ── Main component ─────────────────────────────────────────────────────────
 
-export function HomePage() {
-  const [regions, setRegions] = useState([])
+export function HomePage({ allRegions }) {
   const [featured, setFeatured] = useState([])
   const { setSelectedRegion } = useApp()
+  const loading = allRegions.length === 0
 
+  // Only fetch the gallery after regions have loaded — avoids competing on cold start
   useEffect(() => {
-    fetchRegions()
-      .then(setRegions)
-      .catch(() => {})
-
-    // Grab SE campgrounds for the gallery — grows automatically as data fills in
+    if (loading) return
     fetchCampgrounds({ region: 'southeast', limit: 20 })
       .then((data) => setFeatured(data.items ?? []))
       .catch(() => {})
-  }, [])
+  }, [loading])
+
+  if (loading) {
+    return (
+      <div className={styles.loadingScreen}>
+        <span className={styles.navLogo}>CampScout</span>
+        <div className={styles.loadingRow}>
+          <span className={styles.loadingDot} />
+          <span className={styles.loadingDot} />
+          <span className={styles.loadingDot} />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
@@ -132,15 +142,8 @@ export function HomePage() {
           <p className={styles.sectionSub}>Choose a region to open the interactive map</p>
         </div>
 
-        {regions.length === 0 ? (
-          <div className={styles.loadingRow}>
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
-          </div>
-        ) : (
-          <div className={styles.regionGrid}>
-            {regions.map((r) => (
+        <div className={styles.regionGrid}>
+            {allRegions.map((r) => (
               <button
                 key={r.id}
                 className={styles.regionCard}
@@ -159,7 +162,6 @@ export function HomePage() {
               </button>
             ))}
           </div>
-        )}
       </section>
 
       {/* ── Footer ────────────────────────────────────────── */}
