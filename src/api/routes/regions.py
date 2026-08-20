@@ -6,15 +6,21 @@ GET /regions — list all 6 regions with campground counts
 from fastapi import APIRouter, Depends
 from sqlalchemy import text
 from sqlalchemy.orm import Session
+from cachetools import TTLCache
 
 from ..deps import get_db
 from ..schemas import RegionSchema
 
 router = APIRouter()
 
+_cache: TTLCache = TTLCache(maxsize=1, ttl=3600)  # 1 hour — regions don't change between pipeline runs
+
 
 @router.get("/regions", response_model=list[RegionSchema])
 def list_regions(db: Session = Depends(get_db)):
+    if "regions" in _cache:
+        return _cache["regions"]
+
     rows = db.execute(
         text("""
             SELECT
@@ -29,4 +35,6 @@ def list_regions(db: Session = Depends(get_db)):
         """)
     ).mappings().all()
 
-    return [RegionSchema.model_validate(dict(row)) for row in rows]
+    result = [RegionSchema.model_validate(dict(row)) for row in rows]
+    _cache["regions"] = result
+    return result
