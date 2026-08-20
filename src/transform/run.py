@@ -552,7 +552,7 @@ def transform_tags(db: Session) -> None:
         text_parts = [cg.description or ""]
 
         if cg.nps_id:
-            nps_row = db.query(RawNpsCampground).filter_by(nps_id=cg.nps_id).one_or_none()
+            nps_row = db.query(RawNpsCampground).filter_by(nps_id=cg.nps_id).first()
             if nps_row:
                 nps = nps_row.payload
                 text_parts += [
