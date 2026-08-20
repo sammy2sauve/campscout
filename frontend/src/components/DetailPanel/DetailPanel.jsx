@@ -255,6 +255,10 @@ export function DetailPanel() {
                 })
                 .filter(({ icon }) => icon && !seenWild.has(icon) && seenWild.add(icon))
 
+              const hasEnrichedData =
+                actIcons.length > 0 || terIcons.length > 0 || terDots.length > 0 ||
+                wildIcons.length > 0 || AMENITY_LABELS.some(({ key }) => detail[key])
+
               return (
                 <div ref={summaryRef} className={styles.summarySection}>
 
@@ -273,55 +277,68 @@ export function DetailPanel() {
                     onClick={() => setShowAvailModal(true)}
                   />
 
-                  {/* Activities */}
-                  {actIcons.length > 0 && (
-                    <section>
-                      <h3 className={styles.sectionTitle}>Activities</h3>
-                      <div className={styles.bubbleRow}>
-                        {actIcons.map(({ icon, label }) => (
-                          <IconBubble key={label} icon={icon} label={label} />
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                  {/* Enriched data or processing notice */}
+                  {hasEnrichedData ? (
+                    <>
+                      {/* Activities */}
+                      {actIcons.length > 0 && (
+                        <section>
+                          <h3 className={styles.sectionTitle}>Activities</h3>
+                          <div className={styles.bubbleRow}>
+                            {actIcons.map(({ icon, label }) => (
+                              <IconBubble key={label} icon={icon} label={label} />
+                            ))}
+                          </div>
+                        </section>
+                      )}
 
-                  {/* Landscape */}
-                  {(terIcons.length > 0 || terDots.length > 0) && (
-                    <section>
-                      <h3 className={styles.sectionTitle}>Landscape</h3>
-                      <div className={styles.bubbleRow}>
-                        {terIcons.map(({ icon, label, dotColor }) => (
-                          <IconBubble key={label} icon={icon} label={label} dotColor={dotColor} />
-                        ))}
-                        {terDots.map(({ label, dotColor }) => (
-                          <span key={label} title={label} className={styles.dotBubble} style={{ background: dotColor }} aria-label={label} />
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                      {/* Landscape */}
+                      {(terIcons.length > 0 || terDots.length > 0) && (
+                        <section>
+                          <h3 className={styles.sectionTitle}>Landscape</h3>
+                          <div className={styles.bubbleRow}>
+                            {terIcons.map(({ icon, label, dotColor }) => (
+                              <IconBubble key={label} icon={icon} label={label} dotColor={dotColor} />
+                            ))}
+                            {terDots.map(({ label, dotColor }) => (
+                              <span key={label} title={label} className={styles.dotBubble} style={{ background: dotColor }} aria-label={label} />
+                            ))}
+                          </div>
+                        </section>
+                      )}
 
-                  {/* Wildlife */}
-                  {wildIcons.length > 0 && (
-                    <section>
-                      <h3 className={styles.sectionTitle}>Wildlife</h3>
-                      <div className={styles.bubbleRow}>
-                        {wildIcons.map(({ icon, label }) => (
-                          <IconBubble key={label} icon={icon} label={label} />
-                        ))}
-                      </div>
-                    </section>
-                  )}
+                      {/* Wildlife */}
+                      {wildIcons.length > 0 && (
+                        <section>
+                          <h3 className={styles.sectionTitle}>Wildlife</h3>
+                          <div className={styles.bubbleRow}>
+                            {wildIcons.map(({ icon, label }) => (
+                              <IconBubble key={label} icon={icon} label={label} />
+                            ))}
+                          </div>
+                        </section>
+                      )}
 
-                  {/* Amenities */}
-                  {AMENITY_LABELS.some(({ key }) => detail[key]) && (
-                    <section>
-                      <h3 className={styles.sectionTitle}>Amenities</h3>
-                      <div className={styles.amenityRow}>
-                        {AMENITY_LABELS.map(({ key, label }) =>
-                          detail[key] ? <span key={key} className={styles.amenityChip}>{label}</span> : null
-                        )}
+                      {/* Amenities */}
+                      {AMENITY_LABELS.some(({ key }) => detail[key]) && (
+                        <section>
+                          <h3 className={styles.sectionTitle}>Amenities</h3>
+                          <div className={styles.amenityRow}>
+                            {AMENITY_LABELS.map(({ key, label }) =>
+                              detail[key] ? <span key={key} className={styles.amenityChip}>{label}</span> : null
+                            )}
+                          </div>
+                        </section>
+                      )}
+                    </>
+                  ) : (
+                    <div className={styles.processingNotice}>
+                      <span className={styles.processingIcon} aria-hidden="true">⚙</span>
+                      <div>
+                        <strong>Transformation in progress</strong>
+                        <p>Amenities, tags, and site details are being extracted from source data. Check back soon.</p>
                       </div>
-                    </section>
+                    </div>
                   )}
 
                   {/* Alerts */}
