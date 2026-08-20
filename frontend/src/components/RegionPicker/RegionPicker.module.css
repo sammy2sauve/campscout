@@ -1,5 +1,6 @@
 .backdrop {
-  height: 100%;
+  position: fixed;
+  inset: 0;
   overflow-y: auto;
   background: var(--color-bg);
   display: flex;
