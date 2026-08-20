@@ -66,19 +66,6 @@ export function HomePage({ allRegions }) {
       .catch(() => {})
   }, [loading])
 
-  if (loading) {
-    return (
-      <div className={styles.loadingScreen}>
-        <span className={styles.navLogo}>CampScout</span>
-        <div className={styles.loadingRow}>
-          <span className={styles.loadingDot} />
-          <span className={styles.loadingDot} />
-          <span className={styles.loadingDot} />
-        </div>
-      </div>
-    )
-  }
-
   return (
     <div className={styles.page}>
 
@@ -142,7 +129,14 @@ export function HomePage({ allRegions }) {
           <p className={styles.sectionSub}>Choose a region to open the interactive map</p>
         </div>
 
-        <div className={styles.regionGrid}>
+        {loading ? (
+          <div className={styles.loadingRow}>
+            <span className={styles.loadingDot} />
+            <span className={styles.loadingDot} />
+            <span className={styles.loadingDot} />
+          </div>
+        ) : (
+          <div className={styles.regionGrid}>
             {allRegions.map((r) => (
               <button
                 key={r.id}
@@ -162,6 +156,7 @@ export function HomePage({ allRegions }) {
               </button>
             ))}
           </div>
+        )}
       </section>
 
       {/* ── Footer ────────────────────────────────────────── */}
