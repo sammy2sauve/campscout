@@ -317,25 +317,43 @@ def transform_campsites(db: Session) -> None:
 # Step 5: availability (upsert model)
 # ---------------------------------------------------------------------------
 
-def transform_availability(db: Session) -> None:
+def transform_availability(db: Session, regions: list[str] | None = None) -> None:
     """
     Populate availability_snapshots from raw_rec_availability.
     Uses upsert (ON CONFLICT DO UPDATE) — not append.
     Bulk-inserts in chunks to avoid per-row round-trips.
-    """
-    raw_rows = db.query(RawRecAvailability).all()
-    log.info("Processing %d raw availability rows", len(raw_rows))
 
-    # Build a lookup of rec_campsite_id → internal campsite.id
+    Only processes campsites whose campground belongs to `regions` (default: SE only).
+    This keeps the availability_snapshots table within Neon's 512 MB free-tier limit.
+    """
+    if regions is None:
+        regions = ["southeast"]
+
+    raw_rows = db.query(RawRecAvailability).all()
+    log.info("Processing %d raw availability rows (regions: %s)", len(raw_rows), regions)
+
+    # Only map campsites that belong to campgrounds in the allowed regions
+    se_campsite_ids: set[int] = {
+        cs.id
+        for cs in (
+            db.query(Campsite.id)
+            .join(Campground, Campsite.campground_id == Campground.id)
+            .filter(Campground.region_id.in_(regions))
+            .all()
+        )
+    }
+
+    # Build a lookup of rec_campsite_id → internal campsite.id (SE only)
     site_id_map: dict[str, int] = {
         cs.rec_campsite_id: cs.id
         for cs in db.query(Campsite.rec_campsite_id, Campsite.id).all()
+        if cs.id in se_campsite_ids
     }
 
     # Build a lookup of facility_id → campground ORM object (for timestamp update)
     facility_cg_map: dict[str, Campground] = {
         cg.rec_facility_id: cg
-        for cg in db.query(Campground).all()
+        for cg in db.query(Campground).filter(Campground.region_id.in_(regions)).all()
     }
 
     upserted = 0
@@ -353,6 +371,10 @@ def transform_availability(db: Session) -> None:
                 continue
 
             for dt_str, status in site_data.get("availabilities", {}).items():
+                # Skip non-reservable dates — only Available/Reserved matter and
+                # "Not Reservable" would bloat the table for no query benefit.
+                if status == "Not Reservable":
+                    continue
                 try:
                     snap_date = date.fromisoformat(dt_str[:10])
                 except ValueError:
