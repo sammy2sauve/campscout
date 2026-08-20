@@ -120,7 +120,7 @@ function AppInner() {
   const regionData = allRegions.find((r) => r.id === selectedRegion) ?? null
 
   if (!selectedRegion) {
-    return <HomePage allRegions={allRegions} />
+    return <HomePage />
   }
 
   return <Dashboard regionData={regionData} allRegions={allRegions} />

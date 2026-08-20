@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchCampgrounds } from '../../api/client.js'
+import { fetchRegions, fetchCampgrounds } from '../../api/client.js'
 import { useApp } from '../../context/AppContext.jsx'
 import styles from './HomePage.module.css'
 
@@ -11,8 +11,6 @@ const REGION_ICONS = {
   mountain:    '⛰️',
   pacific_west:'🌲',
 }
-
-// ── Photo gallery strip ────────────────────────────────────────────────────
 
 function Gallery({ campgrounds }) {
   const { setSelectedRegion } = useApp()
@@ -51,14 +49,20 @@ function Gallery({ campgrounds }) {
   )
 }
 
-// ── Main component ─────────────────────────────────────────────────────────
-
-export function HomePage({ allRegions }) {
+export function HomePage() {
+  const [regions, setRegions] = useState([])
   const [featured, setFeatured] = useState([])
+  const [loading, setLoading] = useState(true)
   const { setSelectedRegion } = useApp()
-  const loading = allRegions.length === 0
 
-  // Only fetch the gallery after regions have loaded — avoids competing on cold start
+  useEffect(() => {
+    fetchRegions()
+      .then(setRegions)
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [])
+
+  // Fetch gallery only after regions land so it doesn't compete on cold start
   useEffect(() => {
     if (loading) return
     fetchCampgrounds({ region: 'southeast', limit: 20 })
@@ -69,12 +73,10 @@ export function HomePage({ allRegions }) {
   return (
     <div className={styles.page}>
 
-      {/* ── Fixed nav ─────────────────────────────────────── */}
       <nav className={styles.nav}>
         <span className={styles.navLogo}>CampScout</span>
       </nav>
 
-      {/* ── Hero ──────────────────────────────────────────── */}
       <section className={styles.hero}>
         <div className={styles.heroContent}>
           <p className={styles.eyebrow}>Federal Campground Search</p>
@@ -90,10 +92,8 @@ export function HomePage({ allRegions }) {
         </div>
       </section>
 
-      {/* ── Photo gallery (hidden until data arrives) ──────── */}
       <Gallery campgrounds={featured} />
 
-      {/* ── About ─────────────────────────────────────────── */}
       <section className={styles.aboutSection}>
         <div className={styles.aboutInner}>
           <h2 className={styles.aboutTitle}>Built from real data.</h2>
@@ -122,7 +122,6 @@ export function HomePage({ allRegions }) {
         </div>
       </section>
 
-      {/* ── Region picker ─────────────────────────────────── */}
       <section id="explore" className={styles.regionSection}>
         <div className={styles.sectionHeader}>
           <h2 className={styles.sectionTitle}>Start Exploring</h2>
@@ -137,7 +136,7 @@ export function HomePage({ allRegions }) {
           </div>
         ) : (
           <div className={styles.regionGrid}>
-            {allRegions.map((r) => (
+            {regions.map((r) => (
               <button
                 key={r.id}
                 className={styles.regionCard}
@@ -159,7 +158,6 @@ export function HomePage({ allRegions }) {
         )}
       </section>
 
-      {/* ── Footer ────────────────────────────────────────── */}
       <footer className={styles.footer}>
         <p>Data: Recreation.gov · National Park Service · NOAA · © OpenStreetMap contributors</p>
       </footer>
