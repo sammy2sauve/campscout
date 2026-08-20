@@ -1,9 +1,7 @@
 /* ── Page shell ─────────────────────────────────────────────────────────── */
 
 .page {
-  position: fixed;
-  inset: 0;
-  overflow-y: auto;
+  min-height: 100vh;
   background: #0e0e0e;
   color: #e8dfc8;
 }
