@@ -78,8 +78,16 @@ function RegionSwitcher({ allRegions }) {
 
 function Dashboard({ regionData, allRegions }) {
   const [bbox, setBbox] = useState(null)
-  const { filters, selectedRegion, setSelectedRegion } = useApp()
+  const [filterOpen, setFilterOpen] = useState(false)
+  const { filters, selectedRegion, setSelectedRegion, selectedId } = useApp()
   const { campgrounds, dataAsOf, loading } = useCampgrounds(bbox, filters, selectedRegion)
+
+  // Close filter sheet when a campground is selected on mobile
+  const prevSelectedId = useRef(null)
+  useEffect(() => {
+    if (selectedId && selectedId !== prevSelectedId.current) setFilterOpen(false)
+    prevSelectedId.current = selectedId
+  }, [selectedId])
 
   return (
     <div className={styles.layout}>
@@ -94,7 +102,7 @@ function Dashboard({ regionData, allRegions }) {
       </header>
 
       <div className={styles.body}>
-        <FilterPanel />
+        <FilterPanel open={filterOpen} />
         <MapView
           campgrounds={campgrounds}
           dataAsOf={dataAsOf}
@@ -103,6 +111,15 @@ function Dashboard({ regionData, allRegions }) {
         />
         <DetailPanel />
       </div>
+
+      <button
+        className={`${styles.filterFab} ${filterOpen ? styles.filterFabActive : ''}`}
+        onClick={() => setFilterOpen((v) => !v)}
+        type="button"
+        aria-label="Toggle filters"
+      >
+        ⚙ {filterOpen ? 'Close Filters' : 'Filters'}
+      </button>
     </div>
   )
 }

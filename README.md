@@ -4,6 +4,8 @@ Finding an open federal campsite shouldn't require five browser tabs, three gove
 
 **[→ Try the live demo](https://campscout-delta.vercel.app)** — no sign-up required
 
+> **Note:** The API is hosted on Render's free tier, which spins down after inactivity. The first request after a period of dormancy may take 30–60 seconds while the server cold-starts. Subsequent requests are fast.
+
 ---
 
 [![CampScout map dashboard](docs/screenshots/map.png)](https://campscout-delta.vercel.app)

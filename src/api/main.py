@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routes import alerts, availability, campgrounds, regions, weather
+from .routes import alerts, availability, campgrounds, campsites, regions, weather
 
 load_dotenv()
 
@@ -42,5 +42,6 @@ app.include_router(regions.router, prefix="/api", tags=["regions"])
 # All campground-scoped routes share the /api/campgrounds prefix.
 app.include_router(campgrounds.router, prefix="/api/campgrounds", tags=["campgrounds"])
 app.include_router(availability.router, prefix="/api/campgrounds", tags=["availability"])
+app.include_router(campsites.router, prefix="/api/campgrounds", tags=["campsites"])
 app.include_router(weather.router, prefix="/api/campgrounds", tags=["weather"])
 app.include_router(alerts.router, prefix="/api/campgrounds", tags=["alerts"])

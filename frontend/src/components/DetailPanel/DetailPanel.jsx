@@ -131,6 +131,20 @@ function AvailPill({ data, loading, start, end, onClick }) {
     )
   }
 
+  // Campsites exist but availability hasn't been synced yet
+  if (data?.syncing) {
+    return (
+      <div className={styles.fcfsBadge}>
+        <span aria-hidden="true">⏳</span>
+        <span>
+          <strong>Availability syncing</strong>
+          <br />
+          <small>Data is being loaded — check back soon</small>
+        </span>
+      </div>
+    )
+  }
+
   // FCFS campground — campsites exist but are first-come-first-serve
   if (data?.fcfs_only) {
     return (

@@ -68,10 +68,15 @@ A phased build order. Each phase has a rough goal and concrete tasks.
 - [x] Detail panel: photos, weather strip, availability pill, activities/landscape/wildlife
 - [x] FCFS walk-in badge (no date picker for first-come sites)
 - [x] MapLegend, FreshnessBadge
-- [x] Region state shape overlay (GeoJSON, amber glow on active region)
+- [x] Region bbox mask (world-minus-bbox polygon) + state glow overlay — markers always in the clear
 - [x] Top nav with region switcher dropdown
 - [x] Full scrollable home page (hero, photo gallery, about, region cards)
 - [x] Fall/earth theme (parchment palette)
+- [x] Skeleton loading cards for region picker (shimmer animation)
+- [x] Mobile layout: bottom-sheet FilterPanel + DetailPanel, filter FAB
+- [x] "Availability syncing" badge when campsites exist but data not yet loaded
+- [x] GET /api/campgrounds/{id}/campsites endpoint (per-site attributes)
+- [x] README: Render free-tier cold-start note
 
 ---
 
@@ -83,15 +88,14 @@ A phased build order. Each phase has a rough goal and concrete tasks.
 - [x] GitHub Actions: weekly national metadata sync (Sunday 03:00 UTC)
 - [x] GitHub Actions: daily SE availability sync (daily 05:00 UTC)
 - [x] Pipeline runs in local Prefect mode (no Prefect Cloud, free tier)
+- [x] keep-alive.yml: pings /api/regions every 14 min to prevent Render cold sleep
+- [x] National ingestion run: 3,961 campgrounds across 6 regions pulled
+- [x] Region bboxes corrected in DB (derived from actual campground extents + 1.5° padding)
 
 ### Remaining
-- [ ] Push to GitHub (if not already)
-- [ ] Create Render web service, add env secrets (DATABASE_URL, RECREATION_GOV_API_KEY, NPS_API_KEY, NOAA_USER_AGENT)
-- [ ] Deploy frontend to Vercel (connect GitHub repo → `frontend/` dir)
-- [ ] Add GitHub repo secrets (same 4 env vars) for Actions to use
-- [ ] Run national metadata pipeline once to fill all 6 regions (~4,000 campgrounds)
-- [ ] Verify: `GET /api/regions` returns 6 regions with campground counts
-- [ ] Verify: daily/weekly Actions trigger successfully
+- [ ] Push latest code to GitHub
+- [ ] Verify: daily/weekly Actions trigger successfully on remote
+- [ ] Run `--steps availability tags` after each new national ingest for full data coverage
 
 ---
 

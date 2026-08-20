@@ -129,10 +129,15 @@ export function HomePage() {
         </div>
 
         {loading ? (
-          <div className={styles.loadingRow}>
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
+          <div className={styles.regionGrid}>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className={styles.regionCardSkeleton}>
+                <span className={styles.skeletonIcon} />
+                <span className={styles.skeletonLine} style={{ width: '55%' }} />
+                <span className={styles.skeletonLine} style={{ width: '80%', height: '10px', opacity: 0.5 }} />
+                <span className={styles.skeletonLine} style={{ width: '40%', height: '11px', marginTop: '4px' }} />
+              </div>
+            ))}
           </div>
         ) : (
           <div className={styles.regionGrid}>

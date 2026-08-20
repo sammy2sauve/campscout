@@ -324,43 +324,42 @@
   margin-top: 4px;
 }
 
-/* ── Full-page loading screen ───────────────────────────────────────────── */
+/* ── Skeleton region cards ──────────────────────────────────────────────── */
 
-.loadingScreen {
-  position: fixed;
-  inset: 0;
-  background: #0e0e0e;
+.regionCardSkeleton {
+  background: #191910;
+  border: 1.5px solid rgba(200, 168, 112, 0.10);
+  border-radius: 10px;
+  padding: 24px 20px 20px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 32px;
+  align-items: flex-start;
+  gap: 10px;
 }
 
-/* ── Loading dots ───────────────────────────────────────────────────────── */
-
-.loadingRow {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 0;
+.skeletonIcon {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #2a2a1a 25%, #353520 50%, #2a2a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  display: block;
+  margin-bottom: 2px;
 }
 
-.loadingDot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: #c8a870;
-  animation: bounce 0.9s ease-in-out infinite;
+.skeletonLine {
+  height: 14px;
+  border-radius: 4px;
+  background: linear-gradient(90deg, #2a2a1a 25%, #353520 50%, #2a2a1a 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  display: block;
 }
 
-.loadingDot:nth-child(2) { animation-delay: 0.15s; }
-.loadingDot:nth-child(3) { animation-delay: 0.30s; }
-
-@keyframes bounce {
-  0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
-  40%           { transform: scale(1);   opacity: 1;   }
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ── Footer ─────────────────────────────────────────────────────────────── */

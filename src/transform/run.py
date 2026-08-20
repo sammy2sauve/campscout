@@ -117,8 +117,10 @@ def transform_campgrounds(db: Session) -> None:
         if addrs:
             cg.state_code = addrs[0].get("AddressStateCode")
 
-        # ADA flag goes into amenity_flags
-        if f.get("FacilityAdaAccess", ""):
+        # ADA flag — treat as affirmative only when not a clear "no" or empty
+        _ada_raw = (f.get("FacilityAdaAccess") or "").strip().lower()
+        _ada_no = {"", "n", "no", "none", "undefined"}
+        if _ada_raw and _ada_raw not in _ada_no and not _ada_raw.startswith("no "):
             cg.amenity_flags = (cg.amenity_flags or 0) | int(AmenityFlag.ADA_ACCESSIBLE)
 
         # Assign region from state code
@@ -291,17 +293,21 @@ def transform_campsites(db: Session) -> None:
 
         db.commit()
 
-    # Roll up electricity to campground amenity_flags
+    # Roll up electricity and pets from campsites to campground amenity_flags
     for cg in db.query(Campground).all():
-        has_any = (
-            db.query(Campsite)
-            .filter_by(campground_id=cg.id, has_electricity=True)
-            .first()
-        )
-        if has_any:
-            cg.amenity_flags = (cg.amenity_flags or 0) | int(AmenityFlag.ELECTRICITY)
+        has_elec = db.query(Campsite).filter_by(campground_id=cg.id, has_electricity=True).first()
+        has_pets = db.query(Campsite).filter_by(campground_id=cg.id, pets_allowed=True).first()
+
+        flags = cg.amenity_flags or 0
+        if has_elec:
+            flags |= int(AmenityFlag.ELECTRICITY)
         else:
-            cg.amenity_flags = (cg.amenity_flags or 0) & ~int(AmenityFlag.ELECTRICITY)
+            flags &= ~int(AmenityFlag.ELECTRICITY)
+        if has_pets:
+            flags |= int(AmenityFlag.PETS_ALLOWED)
+        else:
+            flags &= ~int(AmenityFlag.PETS_ALLOWED)
+        cg.amenity_flags = flags
 
     db.commit()
     log.info("Campsites table: %d rows", db.query(Campsite).count())
@@ -407,19 +413,6 @@ def transform_alerts(db: Session) -> None:
 
     for raw in raw_rows:
         for alert in raw.payload:
-            # Find which campground this alert belongs to via park_code → nps_id
-            cg = db.query(Campground).filter_by(nps_id=None).first()  # start with full query
-            cg = (
-                db.query(Campground)
-                .filter(Campground.nps_id.isnot(None))
-                .join(
-                    RawNpsCampground,
-                    RawNpsCampground.payload["parkCode"].astext == alert.get("parkCode", ""),
-                )
-                .first()
-            )
-            # Simpler fallback: find campground whose nps_id maps to this park_code
-            # (nps_id is the campground UUID, not the park code — need to look up via raw table)
             nps_rows = (
                 db.query(RawNpsCampground)
                 .filter(

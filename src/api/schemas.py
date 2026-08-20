@@ -155,8 +155,29 @@ class AvailabilityResponse(BaseModel):
     available_site_count: int
     fcfs_only: bool = False   # True when all campsites are first-come-first-serve
     no_data: bool = False     # True when campground has no campsite records (not ingested / walk-in only)
+    syncing: bool = False     # True when campsites exist but availability hasn't been fetched yet
     start: date
     end: date
+
+
+class CampsiteDetail(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    rec_campsite_id: str
+    name: str | None = None
+    loop: str | None = None
+    site_type: str | None = None
+    type_of_use: str | None = None
+    reserve_type: str | None = None
+    is_reservable: bool = False
+    ada_accessible: bool = False
+    has_electricity: bool = False
+    has_water_hookup: bool = False
+    has_sewer_hookup: bool = False
+    pets_allowed: bool | None = None
+    max_occupants: int | None = None
+    max_vehicle_length_ft: int | None = None
 
 
 class WeatherRow(BaseModel):

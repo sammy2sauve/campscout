@@ -114,11 +114,41 @@ const STATE_ABBR = {
   'Puerto Rico': 'PR',
 }
 
-// ── State-shape overlay: grey mask + region glow ──────────────────────────
-// Fetches us-states.geojson once; paints non-region states dark grey
-// and traces region-state borders with an amber glow.
+// ── Region bbox mask ───────────────────────────────────────────────────────
+// Grey everything outside the region's bounding box using a world-minus-bbox
+// polygon. This guarantees markers (which are all inside the bbox) are never
+// rendered on top of grey, regardless of state-boundary precision.
 
-function StateOverlay({ regionData }) {
+function RegionBboxMask({ regionData }) {
+  if (!regionData?.bbox) return null
+  const { min_lat, min_lon, max_lat, max_lon } = regionData.bbox
+
+  const worldWithHole = {
+    type: 'Feature',
+    geometry: {
+      type: 'Polygon',
+      coordinates: [
+        // Outer: world envelope
+        [[-180, -90], [180, -90], [180, 90], [-180, 90], [-180, -90]],
+        // Inner hole: region bbox (counter-clockwise for GeoJSON hole)
+        [[min_lon, min_lat], [min_lon, max_lat], [max_lon, max_lat], [max_lon, min_lat], [min_lon, min_lat]],
+      ],
+    },
+  }
+
+  return (
+    <GeoJSON
+      key={regionData.id + '-mask'}
+      data={worldWithHole}
+      style={{ fillColor: '#0e0e0e', fillOpacity: 0.65, stroke: false, interactive: false }}
+    />
+  )
+}
+
+// ── State glow overlay ─────────────────────────────────────────────────────
+// Amber border glow on region states only — no grey fill (handled by bbox mask above).
+
+function StateGlowOverlay({ regionData }) {
   const [geojson, setGeojson] = useState(null)
 
   useEffect(() => {
@@ -144,15 +174,10 @@ function StateOverlay({ regionData }) {
         interactive: false,
       }
     }
-    return {
-      fillColor: '#0e0e0e',
-      fillOpacity: 0.68,
-      stroke: false,
-      interactive: false,
-    }
+    return { fillOpacity: 0, stroke: false, interactive: false }
   }
 
-  return <GeoJSON key={regionData.id} data={geojson} style={stateStyle} />
+  return <GeoJSON key={regionData.id + '-glow'} data={geojson} style={stateStyle} />
 }
 
 // ── Region bounds fitter ───────────────────────────────────────────────────
@@ -257,8 +282,9 @@ export function MapView({ campgrounds, dataAsOf, onBboxChange, regionData }) {
         <SearchCenterWatcher />
         <RegionBoundsFitter regionData={regionData} />
 
-        {/* Grey mask (non-region states) + amber glow (region borders) */}
-        <StateOverlay regionData={regionData} />
+        {/* Bbox-based grey mask (no state precision issues) + amber state glow */}
+        <RegionBboxMask regionData={regionData} />
+        <StateGlowOverlay regionData={regionData} />
 
         {/* National forests + parks feature markers */}
         <FeatureLayer minZoom={6} />

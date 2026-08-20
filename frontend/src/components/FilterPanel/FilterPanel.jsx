@@ -15,11 +15,13 @@ const AMENITY_FILTERS = [
   { key: 'pets_allowed', label: 'Dog Friendly' },
 ]
 
-export function FilterPanel() {
+export function FilterPanel({ open = true }) {
   const { filters, setFilter, toggleTag, clearFilters } = useApp()
+  const panelClass = [styles.panel, open ? styles.open : ''].filter(Boolean).join(' ')
 
   return (
-    <aside className={styles.panel}>
+    <aside className={panelClass}>
+      <div className={styles.panelHandle} aria-hidden="true" />
       <div className={styles.header}>
         <span className={styles.title}>Filters</span>
         <button className={styles.clearBtn} onClick={clearFilters}>Clear all</button>

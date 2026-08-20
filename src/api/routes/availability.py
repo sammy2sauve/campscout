@@ -31,12 +31,16 @@ def get_availability(
     start: Annotated[date, Query(description="Start date (inclusive), ISO format YYYY-MM-DD")],
     end: Annotated[date, Query(description="End date (inclusive), ISO format YYYY-MM-DD")],
 ) -> AvailabilityResponse:
-    if not db.query(Campground).filter(Campground.id == campground_id).first():
+    campground = db.query(Campground).filter(Campground.id == campground_id).first()
+    if not campground:
         raise HTTPException(status_code=404, detail="Campground not found")
-
     campsites = db.query(Campsite).filter(Campsite.campground_id == campground_id).all()
     if not campsites:
         return AvailabilityResponse(sites=[], available_site_count=0, fcfs_only=False, no_data=True, start=start, end=end)
+
+    # Campsites exist but availability has never been fetched — still syncing
+    if campground.availability_fetched_at is None:
+        return AvailabilityResponse(sites=[], available_site_count=0, syncing=True, start=start, end=end)
 
     campsite_ids = [c.id for c in campsites]
     campsite_map = {c.id: c for c in campsites}
