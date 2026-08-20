@@ -8,7 +8,10 @@ Finding an open federal campsite shouldn't require five browser tabs, three gove
 
 **Current data:** 3,961 campgrounds · 64,000+ individual campsites · 6 US regions · live daily availability for the Southeast
 
-**Best way to explore:** Open the **Southeast** region — it has the most complete data (live availability, 7-day weather, amenity and tag extraction all populated). Click any campground in Georgia, the Carolinas, or Tennessee to see the full experience: photo gallery, weather strip, availability windows, and wildlife/landscape/activity tags.
+**Best way to explore:** Open the **Southeast** region and click one of these three campgrounds — they have the most complete data (live availability, 7-day weather, photos, amenity chips, and wildlife/landscape/activity tags all populated):
+- **Springfield** (GA)
+- **Lake Rabun Beach Recreation Area** (GA)
+- **Cotton Hill** (GA)
 
 ---
 
