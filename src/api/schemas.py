@@ -154,6 +154,7 @@ class AvailabilityResponse(BaseModel):
     sites: list[CampsiteWindow]
     available_site_count: int
     fcfs_only: bool = False   # True when all campsites are first-come-first-serve
+    no_data: bool = False     # True when campground has no campsite records (not ingested / walk-in only)
     start: date
     end: date
 

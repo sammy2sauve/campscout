@@ -1,7 +1,9 @@
 .backdrop {
-  min-height: 100vh;
+  height: 100%;
+  overflow-y: auto;
   background: var(--color-bg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 48px 24px;
@@ -91,10 +93,27 @@
 
 .loadingRow {
   display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  margin-top: 48px;
+}
+
+.dotsRow {
+  display: flex;
   gap: 8px;
   align-items: center;
-  justify-content: center;
-  margin-top: 48px;
+}
+
+.slowHint {
+  font-size: 12px;
+  color: var(--color-text-muted);
+  animation: fadeIn 0.4s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .loadingDot {

@@ -82,9 +82,13 @@ def transform_campgrounds(db: Session) -> None:
     rows = db.query(RawRecFacility).all()
     log.info("Processing %d raw facilities", len(rows))
 
+    seen_fids: set[str] = set()
     for row in rows:
         f = row.payload
         fid = f["FacilityID"]
+        if fid in seen_fids:
+            continue
+        seen_fids.add(fid)
 
         cg = db.query(Campground).filter_by(rec_facility_id=fid).one_or_none()
         if cg is None:
@@ -97,7 +101,7 @@ def transform_campgrounds(db: Session) -> None:
 
         # Extract primary photo URLs from MEDIA array (already fetched via full=true)
         media = f.get("MEDIA", [])
-        photos = [m["URL"] for m in media if m.get("EntityMediaType") == "Image" and m.get("URL")]
+        photos = [m["URL"] for m in media if m.get("MediaType") == "Image" and m.get("URL")]
         cg.photo_urls = photos[:5] if photos else None
         cg.reservation_url = f.get("FacilityReservationURL")
         cg.stay_limit = f.get("StayLimit") or None
@@ -115,7 +119,7 @@ def transform_campgrounds(db: Session) -> None:
 
         # ADA flag goes into amenity_flags
         if f.get("FacilityAdaAccess", ""):
-            cg.amenity_flags = cg.amenity_flags | int(AmenityFlag.ADA_ACCESSIBLE)
+            cg.amenity_flags = (cg.amenity_flags or 0) | int(AmenityFlag.ADA_ACCESSIBLE)
 
         # Assign region from state code
         if cg.state_code:
@@ -148,11 +152,12 @@ def transform_nps_link(db: Session) -> None:
 
         cg.nps_id = nps["id"]
         amenities = parse_nps_amenities(nps)
+        existing = cg.amenity_flags or 0
         cg.amenity_flags = dict_to_flags({
             **amenities,
-            "has_electricity": bool(cg.amenity_flags & int(AmenityFlag.ELECTRICITY)),
-            "pets_allowed":    bool(cg.amenity_flags & int(AmenityFlag.PETS_ALLOWED)),
-            "ada_accessible":  bool(cg.amenity_flags & int(AmenityFlag.ADA_ACCESSIBLE)),
+            "has_electricity": bool(existing & int(AmenityFlag.ELECTRICITY)),
+            "pets_allowed":    bool(existing & int(AmenityFlag.PETS_ALLOWED)),
+            "ada_accessible":  bool(existing & int(AmenityFlag.ADA_ACCESSIBLE)),
         })
         linked += 1
 
@@ -293,9 +298,9 @@ def transform_campsites(db: Session) -> None:
             .first()
         )
         if has_any:
-            cg.amenity_flags = cg.amenity_flags | int(AmenityFlag.ELECTRICITY)
+            cg.amenity_flags = (cg.amenity_flags or 0) | int(AmenityFlag.ELECTRICITY)
         else:
-            cg.amenity_flags = cg.amenity_flags & ~int(AmenityFlag.ELECTRICITY)
+            cg.amenity_flags = (cg.amenity_flags or 0) & ~int(AmenityFlag.ELECTRICITY)
 
     db.commit()
     log.info("Campsites table: %d rows", db.query(Campsite).count())

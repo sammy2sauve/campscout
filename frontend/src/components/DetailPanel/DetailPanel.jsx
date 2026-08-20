@@ -117,7 +117,21 @@ function IconBubble({ icon, label, dotColor }) {
 
 /** Clickable availability pill that opens the modal */
 function AvailPill({ data, loading, start, end, onClick }) {
-  // FCFS campground — no reservation system, show walk-in badge instead
+  // No campsite records at all — walk-in / primitive / not yet ingested
+  if (data?.no_data) {
+    return (
+      <div className={styles.fcfsBadge}>
+        <span aria-hidden="true">📞</span>
+        <span>
+          <strong>Contact the Ranger Station</strong>
+          <br />
+          <small>No online reservation data — walk-in or call ahead for availability</small>
+        </span>
+      </div>
+    )
+  }
+
+  // FCFS campground — campsites exist but are first-come-first-serve
   if (data?.fcfs_only) {
     return (
       <div className={styles.fcfsBadge}>
@@ -125,7 +139,7 @@ function AvailPill({ data, loading, start, end, onClick }) {
         <span>
           <strong>First Come, First Serve</strong>
           <br />
-          <small>Walk-in only — no reservations through Recreation.gov</small>
+          <small>No online reservations — contact the ranger station for availability</small>
         </span>
       </div>
     )

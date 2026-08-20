@@ -36,7 +36,7 @@ def get_availability(
 
     campsites = db.query(Campsite).filter(Campsite.campground_id == campground_id).all()
     if not campsites:
-        return AvailabilityResponse(sites=[], available_site_count=0, fcfs_only=False, start=start, end=end)
+        return AvailabilityResponse(sites=[], available_site_count=0, fcfs_only=False, no_data=True, start=start, end=end)
 
     campsite_ids = [c.id for c in campsites]
     campsite_map = {c.id: c for c in campsites}

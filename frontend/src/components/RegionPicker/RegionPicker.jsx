@@ -16,13 +16,16 @@ const REGION_ICONS = {
 export function RegionPicker() {
   const [regions, setRegions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [slowLoad, setSlowLoad] = useState(false)
   const { setSelectedRegion } = useApp()
 
   useEffect(() => {
+    const slow = setTimeout(() => setSlowLoad(true), 3000)
     fetchRegions()
       .then(setRegions)
       .catch((err) => console.error('fetchRegions failed:', err))
-      .finally(() => setLoading(false))
+      .finally(() => { clearTimeout(slow); setLoading(false) })
+    return () => clearTimeout(slow)
   }, [])
 
   function handleSelect(region) {
@@ -37,9 +40,14 @@ export function RegionPicker() {
 
         {loading ? (
           <div className={styles.loadingRow}>
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
-            <span className={styles.loadingDot} />
+            <div className={styles.dotsRow}>
+              <span className={styles.loadingDot} />
+              <span className={styles.loadingDot} />
+              <span className={styles.loadingDot} />
+            </div>
+            {slowLoad && (
+              <span className={styles.slowHint}>Waking up the server&hellip;</span>
+            )}
           </div>
         ) : (
           <div className={styles.grid}>
