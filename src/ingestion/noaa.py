@@ -92,6 +92,7 @@ def run(coords: list[tuple[str, str]] = DEFAULT_COORDS) -> None:
         httpx.Client(
             headers={"User-Agent": ua, "Accept": "application/geo+json"},
             timeout=15,
+            follow_redirects=True,
         ) as client,
         SessionLocal() as db,
     ):

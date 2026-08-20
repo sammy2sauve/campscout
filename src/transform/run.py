@@ -199,6 +199,7 @@ def transform_noaa_bootstrap(db: Session) -> None:
     with httpx.Client(
         headers={"User-Agent": ua, "Accept": "application/geo+json"},
         timeout=15,
+        follow_redirects=True,
     ) as client:
         for cg in unbooted:
             # Extract lat/lon from PostGIS geometry
